@@ -218,6 +218,18 @@
             "name": "Project Name"
           }
         }
+      },
+      "listing_address": {
+        "type": "string",
+        "description": "Full listing address",
+        "instance_1": {
+          "field_id": "customfield_10603",
+          "name": "NDPU Listing Address"
+        },
+        "instance_2": {
+          "field_id": "customfield_10603",
+          "name": "NDPU Listing Address"
+        }
       }
     },
 
