@@ -230,6 +230,7 @@ class IssueFetcher:
             # Client fields
             client_name = self.field_processor.extract_field_value(fields, 'customfield_10600')
             client_email = self.field_processor.extract_field_value(fields, 'customfield_10601')
+            listing_address = self.field_processor.extract_field_value(fields, 'customfield_10603') # Extract listing address
                     
             comments = self.field_processor.extract_field_value(fields, 'customfield_10612')
             editor_notes = self.field_processor.extract_field_value(fields, 'customfield_11601')
@@ -279,6 +280,7 @@ class IssueFetcher:
                 self._get_location_name(project_key, fields),  # location_name - use mapping or fallback to project name
                 client_name,                  # ndpu_client_name
                 client_email,                 # ndpu_client_email
+                listing_address,              # ndpu_listing_address (Added)
                 comments,                     # ndpu_comments
                 editor_notes,                 # ndpu_editor_notes
                 access_instructions,          # ndpu_access_instructions
