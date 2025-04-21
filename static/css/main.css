@@ -1,0 +1,46 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom styles for our JIRA sync dashboard */
+@layer components {
+  .stat-card {
+    @apply bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow;
+  }
+  
+  .stat-value {
+    @apply text-3xl font-bold text-gray-900;
+  }
+  
+  .stat-label {
+    @apply text-sm font-medium text-gray-500;
+  }
+  
+  .sync-button {
+    @apply px-4 py-2 rounded-md font-medium transition-colors;
+  }
+  
+  .sync-button-primary {
+    @apply sync-button bg-blue-600 text-white hover:bg-blue-700;
+  }
+  
+  .sync-button-danger {
+    @apply sync-button bg-red-600 text-white hover:bg-red-700;
+  }
+  
+  .sync-status {
+    @apply text-sm font-medium rounded-full px-3 py-1;
+  }
+  
+  .status-active {
+    @apply bg-green-100 text-green-800;
+  }
+  
+  .status-stopped {
+    @apply bg-red-100 text-red-800;
+  }
+  
+  .status-error {
+    @apply bg-yellow-100 text-yellow-800;
+  }
+}
