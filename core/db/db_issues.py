@@ -51,6 +51,7 @@ def create_issues_table():
                 location_name TEXT,
                 ndpu_client_name TEXT,
                 ndpu_client_email TEXT,
+                ndpu_listing_address TEXT, -- Added column definition
                 ndpu_comments TEXT,
                 ndpu_editor_notes TEXT,
                 ndpu_access_instructions TEXT,
@@ -131,6 +132,7 @@ def batch_insert_issues(issues_data: List[tuple], batch_size: int = BATCH_SIZE) 
                         location_name = EXCLUDED.location_name,
                         ndpu_client_name = EXCLUDED.ndpu_client_name,
                         ndpu_client_email = EXCLUDED.ndpu_client_email,
+                        ndpu_listing_address = EXCLUDED.ndpu_listing_address, # Added update
                         ndpu_comments = EXCLUDED.ndpu_comments,
                         ndpu_editor_notes = EXCLUDED.ndpu_editor_notes,
                         scheduled = EXCLUDED.scheduled,

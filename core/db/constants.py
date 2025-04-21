@@ -30,8 +30,9 @@ ISSUE_COLUMNS = [
     'location_name',           # 23
     'ndpu_client_name',        # 24
     'ndpu_client_email',       # 25
-    'ndpu_comments',           # 26
-    'ndpu_editor_notes',       # 27
-    'ndpu_access_instructions', # 28
-    'ndpu_special_instructions' # 29
+    'ndpu_listing_address',    # 26 (New)
+    'ndpu_comments',           # 27
+    'ndpu_editor_notes',       # 28
+    'ndpu_access_instructions', # 29
+    'ndpu_special_instructions' # 30
 ]

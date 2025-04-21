@@ -32,6 +32,7 @@ CREATE TABLE jira_issues_v2 (
     location_name TEXT,
     ndpu_client_name TEXT,
     ndpu_client_email TEXT,
+    ndpu_listing_address TEXT, -- Added for listing address
     ndpu_comments TEXT,
     ndpu_editor_notes TEXT
 );
