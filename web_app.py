@@ -29,7 +29,7 @@ scheduler.start()
 
 # Constants
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-CONFIG_FILE = os.path.join(BASE_DIR, 'sync_config.json')
+CONFIG_FILE = os.path.join(BASE_DIR, 'config', 'sync_config.json') # Updated path
 
 def load_config():
     """Load configuration from file"""
