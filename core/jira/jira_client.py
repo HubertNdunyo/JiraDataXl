@@ -17,9 +17,9 @@ logger = logging.getLogger(__name__)
 # Constants
 MAX_RETRIES = 3
 BACKOFF_FACTOR = 0.5
-TIMEOUT = 30
+TIMEOUT = 60  # Increased from 30
 RATE_LIMIT_PAUSE = 0.5  # seconds between requests
-BATCH_SIZE = 200
+BATCH_SIZE = 200 # Reduced from 200
 
 class JiraClientError(Exception):
     """Base exception for JIRA client errors"""
