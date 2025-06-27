@@ -151,15 +151,15 @@ def log_operation(
         return False
 
 def get_project_update_history(
-    project_key: str,
+    project_key: Optional[str] = None,
     limit: int = 100,
     offset: int = 0
 ) -> List[Dict]:
     """
-    Get update history for a project.
+    Get update history for a project or all projects.
     
     Args:
-        project_key: Project identifier
+        project_key: Project identifier (optional - if None, returns all projects)
         limit: Maximum number of records to return
         offset: Number of records to skip
         
@@ -167,25 +167,34 @@ def get_project_update_history(
         List of update log entries
     """
     try:
-        result = execute_query("""
-            SELECT id, last_update_time, status, duration, 
-                   records_processed, error_message, created_at
-            FROM update_log_v2 
-            WHERE project_key = %s
-            ORDER BY created_at DESC
-            LIMIT %s OFFSET %s
-        """, (project_key, limit, offset), fetch=True)
+        if project_key:
+            result = execute_query("""
+                SELECT id, project_key, last_update_time, status, duration, 
+                       records_processed, error_message
+                FROM update_log_v2 
+                WHERE project_key = %s
+                ORDER BY last_update_time DESC
+                LIMIT %s OFFSET %s
+            """, (project_key, limit, offset), fetch=True)
+        else:
+            result = execute_query("""
+                SELECT id, project_key, last_update_time, status, duration, 
+                       records_processed, error_message
+                FROM update_log_v2 
+                ORDER BY last_update_time DESC
+                LIMIT %s OFFSET %s
+            """, (limit, offset), fetch=True)
         
         if result:
             columns = [
-                'id', 'last_update_time', 'status', 'duration',
-                'records_processed', 'error_message', 'created_at'
+                'id', 'project_key', 'last_update_time', 'status', 'duration',
+                'records_processed', 'error_message'
             ]
             return [dict(zip(columns, row)) for row in result]
         return []
         
     except DatabaseError as e:
-        logger.error(f"Failed to get update history for project {project_key}: {e}")
+        logger.error(f"Failed to get update history: {e}")
         raise AuditError(f"Failed to retrieve update history: {e}")
 
 def get_entity_history(

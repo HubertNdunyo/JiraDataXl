@@ -29,6 +29,13 @@
           "system_field": true,
           "required": true,
           "field_id": "status"
+        },
+        "updated": {
+          "type": "datetime",
+          "system_field": true,
+          "required": false,
+          "field_id": "updated",
+          "description": "Last time the issue was updated in JIRA"
         }
       }
     },

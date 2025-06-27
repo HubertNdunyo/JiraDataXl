@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dropbox Metadata Viewer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@4.0.9/dist/tailwind.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+    <div class="min-h-screen">
+        <!-- Navigation Bar -->
+        <nav class="bg-white dark:bg-gray-800 shadow-sm">
+            <div class="mx-auto px-6 py-4">
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center space-x-4">
+                        <h1 class="text-2xl font-bold text-indigo-600 dark:text-indigo-400">Dropbox Metadata Viewer</h1>
+                        <a href="/" class="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100">← Back to Dashboard</a>
+                    </div>
+                    <button id="darkModeToggle" class="p-2 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </nav>
+
+        <div class="container mx-auto px-6 py-8">
+            <!-- Input Section -->
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-8">
+                <h2 class="text-xl font-semibold mb-4">Enter Dropbox Link</h2>
+                <div class="flex gap-4">
+                    <input 
+                        type="text" 
+                        id="dropboxUrl" 
+                        placeholder="https://www.dropbox.com/sh/..." 
+                        value="https://www.dropbox.com/sh/ast50d3uky7fzur/AADLbvvH_DceQ1BHKSuCszrha?dl=0"
+                        class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    >
+                    <button 
+                        id="fetchBtn" 
+                        class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                    >
+                        Fetch Metadata
+                    </button>
+                </div>
+                <div id="errorMessage" class="mt-2 text-red-600 dark:text-red-400 hidden"></div>
+            </div>
+
+            <!-- Results Section -->
+            <div id="resultsSection" class="hidden">
+                <!-- Loading Spinner -->
+                <div id="loadingSpinner" class="hidden">
+                    <div class="flex justify-center items-center py-12">
+                        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+                    </div>
+                </div>
+
+                <!-- Metadata Results -->
+                <div id="metadataResults" class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 hidden">
+                    <h3 class="text-lg font-semibold mb-4">Dropbox Metadata</h3>
+                    <div id="metadataContent" class="space-y-4"></div>
+                </div>
+
+                <!-- File List -->
+                <div id="fileListSection" class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mt-6 hidden">
+                    <h3 class="text-lg font-semibold mb-4">Files in Folder</h3>
+                    <div id="fileListContent" class="overflow-x-auto"></div>
+                </div>
+            </div>
+
+            <!-- Recent URLs -->
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mt-8">
+                <h2 class="text-xl font-semibold mb-4">Recent URLs</h2>
+                <div id="recentUrls" class="space-y-2">
+                    <p class="text-gray-500 dark:text-gray-400">No recent URLs</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/dropbox_viewer.js"></script>
+</body>
+</html>

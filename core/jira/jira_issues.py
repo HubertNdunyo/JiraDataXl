@@ -44,7 +44,7 @@ class IssueFetcher:
         
         # Initialize field processor with config and load fields
         self.field_processor = FieldProcessor(field_config_path)
-        self.fields = ['summary', 'status', 'project']  # Always include basic fields
+        self.fields = ['summary', 'status', 'project', 'updated']  # Always include basic fields
         
         # Add configured fields
         for group in self.field_processor.config.get('field_groups', {}).values():
@@ -194,6 +194,18 @@ class IssueFetcher:
             summary = self.field_processor.extract_field_value(fields, 'summary')
             status = self.field_processor.extract_field_value(fields, 'status.name')
             
+            # Extract updated timestamp from JIRA
+            updated_str = self.field_processor.extract_field_value(fields, 'updated')
+            updated_timestamp = None
+            if updated_str:
+                try:
+                    # Parse JIRA timestamp format (e.g., "2025-06-25T19:31:20.738+0800")
+                    from dateutil import parser
+                    updated_timestamp = parser.parse(updated_str)
+                except Exception as e:
+                    logger.warning(f"Failed to parse updated timestamp for {issue_key}: {e}")
+                    updated_timestamp = datetime.now()
+            
             # Order and photos fields
             order_number = self.field_processor.extract_field_value(fields, 'customfield_10501')
             raw_photos = None
@@ -276,7 +288,7 @@ class IssueFetcher:
                 transitions.get('closed'),     # closed
                 service,                      # ndpu_service
                 project_key,                  # project_name
-                datetime.now(),               # last_updated
+                updated_timestamp or datetime.now(),  # last_updated - use JIRA updated time or fallback to now
                 self._get_location_name(project_key, fields),  # location_name - use mapping or fallback to project name
                 client_name,                  # ndpu_client_name
                 client_email,                 # ndpu_client_email
