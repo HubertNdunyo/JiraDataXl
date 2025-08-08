@@ -1,0 +1,52 @@
+'use client'
+
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import { Shield, Settings, FileJson, BarChart, Archive } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import DashboardLayout from '../dashboard-layout'
+
+const adminRoutes = [
+  { path: '/admin', label: 'Overview', icon: BarChart },
+  { path: '/admin/field-mappings', label: 'Field Mappings', icon: FileJson },
+  { path: '/admin/sync-config', label: 'Sync Settings', icon: Settings },
+  { path: '/admin/backups', label: 'Backups', icon: Archive },
+]
+
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname()
+
+  return (
+    <DashboardLayout>
+      <div className="flex gap-8">
+        <aside className="w-64">
+          <nav className="space-y-1">
+            {adminRoutes.map((route) => {
+              const Icon = route.icon
+              const isActive = pathname === route.path || 
+                             (route.path !== '/admin' && pathname?.startsWith(route.path))
+              return (
+                <Link
+                  key={route.path}
+                  href={route.path}
+                  className={cn(
+                    "flex items-center gap-3 px-4 py-2 rounded-lg transition-colors text-sm",
+                    isActive
+                      ? "bg-gray-100 text-gray-900 font-medium"
+                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                  )}
+                >
+                  <Icon className="w-4 h-4" />
+                  {route.label}
+                </Link>
+              )
+            })}
+          </nav>
+        </aside>
+        <div className="flex-1">
+          {children}
+        </div>
+      </div>
+    </DashboardLayout>
+  )
+}

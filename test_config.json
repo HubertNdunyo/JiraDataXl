@@ -1,0 +1,93 @@
+{
+    "test_settings": {
+        "project_key": "INUA",
+        "test_prefix": "TEST_AUTO_",
+        "issue_type": "NDP Photo / Video Service",
+        "cleanup_after_tests": true,
+        "cleanup_old_tests_days": 7,
+        "pause_between_tests": 2,
+        "pause_between_transitions": 1,
+        "verbose_logging": true
+    },
+    
+    "test_data": {
+        "addresses": [
+            "123 Main Street, Anytown, USA",
+            "456 Oak Avenue, Sample City, CA",
+            "789 Pine Road, Test Town, TX",
+            "321 Elm Street, Demo Village, NY",
+            "654 Maple Drive, Example City, FL"
+        ],
+        
+        "photo_counts": ["10", "15", "20", "25", "30", "35", "40"],
+        
+        "revision_notes": [
+            "Photos need color correction and exposure adjustment",
+            "Overexposed images, requires complete re-edit",
+            "White balance issues throughout the set",
+            "Cropping needed on exterior shots",
+            "Additional angles requested by client"
+        ],
+        
+        "cancellation_reasons": [
+            "Weather conditions prevented shoot",
+            "Client rescheduled for next week",
+            "Property access denied by tenant",
+            "Equipment malfunction on site",
+            "Photographer emergency"
+        ]
+    },
+    
+    "field_mappings": {
+        "ndpu_number_of_raw_photos": "customfield_12602",
+        "ndpu_edited_media_revision_notes": "customfield_10716",
+        "ndpu_client_name": "customfield_10600",
+        "ndpu_client_email": "customfield_10601",
+        "ndpu_listing_address": "customfield_10603",
+        "ndpu_raw_media_folder_link": "customfield_10713",
+        "ndpu_edited_media_folder_link": "customfield_10714"
+    },
+    
+    "transition_ids": {
+        "acknowledge_assignment": "31",
+        "arrive_at_listing": "171",
+        "shoot_complete": "201",
+        "upload_raw_media": "51",
+        "editing_started": "71",
+        "edit_complete": "161",
+        "ndp_media_delivered": "91",
+        "not_approved": "181",
+        "failed_shoot": "311"
+    },
+    
+    "test_scenarios": {
+        "basic_creation": {
+            "enabled": true,
+            "description": "Test basic issue creation with minimal fields"
+        },
+        "complete_workflow": {
+            "enabled": true,
+            "description": "Test complete workflow from Scheduled to Closed",
+            "photo_count": "25"
+        },
+        "cancellation_path": {
+            "enabled": true,
+            "description": "Test failed shoot path from Shoot Complete to Closed"
+        },
+        "escalation_path": {
+            "enabled": true,
+            "description": "Test quality escalation from Final Review to Escalated Editing"
+        },
+        "field_validation": {
+            "enabled": true,
+            "description": "Test field validation requirements for transitions"
+        }
+    },
+    
+    "cleanup_options": {
+        "auto_cleanup": false,
+        "cleanup_on_interrupt": true,
+        "keep_failed_tests": false,
+        "max_test_age_days": 30
+    }
+}

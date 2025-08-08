@@ -1,171 +1,67 @@
-# Jira Data Sync Application
+# JIRA Sync Documentation
 
-A robust application for synchronizing and storing Jira issue data with a focus on reliability and data integrity.
+This documentation is optimized for AI models to understand and work with the JIRA sync system.
 
-## Overview
+## Documentation Structure
 
-This application synchronizes data from multiple Jira instances, storing the complete raw data for maximum flexibility and future-proofing. Instead of transforming and mapping fields during sync, we store the complete Jira response and handle transformations at query time.
+### 1. [SYSTEM_REFERENCE.md](SYSTEM_REFERENCE.md)
+Complete technical reference including:
+- Environment configuration
+- Database schema
+- Field mappings between JIRA instances
+- API endpoints
+- Project structure
+- Performance metrics
+- Quick commands
 
-## Features
+### 2. [OPERATIONAL_GUIDE.md](OPERATIONAL_GUIDE.md)
+Operational information including:
+- Critical security fixes required
+- Known issues and their solutions
+- Feature implementation status
+- Monitoring and maintenance procedures
+- Troubleshooting guide
+- Emergency procedures
 
-- Complete Jira data synchronization
-- Raw data storage in JSONB format
-- Efficient batch processing
-- Comprehensive sync logging with timestamped files
-- Detailed performance metrics
-- Error tracking and recovery
-- Flexible status handling without hardcoding
-- Support for combined fields
-- Full project discovery without filtering
+### 3. [AI_AGENT_GUIDE.md](AI_AGENT_GUIDE.md)
+Guide for AI agents working with the system:
+- System overview and current state
+- Recent major changes
+- Feature implementation details
+- Common questions and answers
 
-## Architecture
+### 4. [FEATURE_TEST_RESULTS.md](FEATURE_TEST_RESULTS.md)
+Comprehensive test results (July 2025):
+- Performance configuration testing
+- Sync history verification
+- Connection pool management
+- Field discovery and caching
+- Automated sync system testing
+- Bug fixes verified (statistics accumulation, socket hang up)
+- All API endpoints tested
 
-The application follows a modular and maintainable architecture:
+### 5. [AUTOMATED_SYNC_GUIDE.md](AUTOMATED_SYNC_GUIDE.md)
+Guide for the automated sync system:
+- APScheduler integration details
+- Configuration options (2-minute minimum)
+- Thread pool implementation
+- Troubleshooting automated syncs
+- Recent bug fixes
 
-1. **Core Components**
-   - Centralized configuration management
-   - Unified logging system
-   - Standardized database operations
-   - Configuration-driven field processing
+## Quick Start
+1. Configure environment variables (see SYSTEM_REFERENCE.md)
+2. Start backend: `cd backend && ./run.sh`
+3. Start frontend: `cd frontend && npm run dev`
+4. Access dashboard at http://localhost:5648
 
-2. **Data Management**
-   - Raw Jira data in JSONB format
-   - Centralized column definitions
-   - Consistent field mapping
-   - Efficient batch processing
-
-3. **Sync Process**
-   - Regular sync every 2 minutes
-   - Multi-instance coordination
-   - Intelligent rate limiting
-   - Robust error handling
-
-4. **Monitoring**
-   - Real-time sync status
-   - Performance metrics
-   - Resource utilization
-   - Comprehensive logging
-
-For detailed documentation, see:
-- [Technical Documentation](TECHNICAL.md)
-- [File Structure](FILE_STRUCTURE.md)
-
-## Requirements
-
-- Python 3.8+
-- PostgreSQL 12+
-- Jira API access
-- Environment variables configured
-
-## Installation
-
-1. Clone the repository:
-```bash
-git clone <repository-url>
-cd dataappV3
-```
-
-2. Install dependencies:
-```bash
-pip install -r requirements.txt
-```
-
-3. Configure the application:
-   - Copy configuration templates:
-     ```bash
-     cp .env.example .env
-     cp config/field_mappings.example.json config/field_mappings.json
-     ```
-   - Edit `.env` with your database and JIRA credentials
-   - Update `field_mappings.json` with your field configuration
-
-4. Initialize the system:
-```bash
-# Initialize database
-python setup.py
-
-# Verify configuration
-python utils/tests/check_specific_issue.py TEST-1
-```
-
-## Configuration
-
-1. **Environment Variables** (in `.env`):
-```bash
-# Database Configuration
-DB_NAME=jira_data
-DB_USER=your_user
-DB_PASSWORD=your_password
-DB_HOST=localhost
-DB_PORT=5432
-
-# JIRA Credentials
-JIRA_USERNAME_1=your_username
-JIRA_PASSWORD_1=your_password
-JIRA_USERNAME_2=your_username
-JIRA_PASSWORD_2=your_password
-```
-
-2. **Field Mappings** (in `config/field_mappings.json`):
-```json
-{
-  "field_groups": {
-    "order_details": {
-      "fields": {
-        "order_number": {
-          "type": "string",
-          "required": true,
-          "instance_1": {
-            "field_id": "customfield_10501"
-          }
-        }
-      }
-    }
-  }
-}
-```
-
-## Usage
-
-1. Start the sync service:
-```bash
-python app.py
-```
-
-2. Monitor sync status:
-```bash
-# View sync logs
-tail -f logs/sync.log
-
-# Check database status
-python utils/tests/analyze_data_volume.py
-```
-
-## Development
-
-1. Set up development environment:
-```bash
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-```
-
-2. Run tests:
-```bash
-python -m pytest
-```
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
-
-## License
-
-This project is proprietary and confidential.
-
-## Support
-
-For support, please contact the development team.
+## Key Information
+- **Backend Port**: 8987 (localhost only)
+- **Frontend Port**: 5648
+- **Database**: PostgreSQL on 10.110.121.130
+- **JIRA Instances**: 2 (betteredits and betteredits2)
+- **Total Projects**: 101
+- **Sync Performance**: 265-315 issues/second (tested)
+- **Average Sync Time**: 30-35 seconds for full sync
+- **Success Rate**: 100% (268 syncs in last 7 days)
+- **Automated Sync**: Enabled (2-minute intervals)
+- **Issues per Sync**: ~8,000-41,000 (varies by project activity)

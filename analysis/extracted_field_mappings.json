@@ -1,0 +1,149 @@
+{
+  "field_mappings": {
+    "NDPU Editing Team": {
+      "instance1_id": "customfield_12644",
+      "instance2_id": "customfield_12648",
+      "field_type": "textfield",
+      "description": "Team responsible for editing"
+    },
+    "NDPU Number of Raw Photos": {
+      "instance1_id": "customfield_12581",
+      "instance2_id": "customfield_12602",
+      "field_type": "textfield",
+      "description": "Count of raw photos uploaded"
+    },
+    "NDPU At Listing Timestamp": {
+      "instance1_id": "customfield_12584",
+      "instance2_id": "customfield_12609",
+      "field_type": "datetime",
+      "description": "Timestamp when at listing location"
+    },
+    "NDPU Shoot Complete Timestamp": {
+      "instance1_id": "customfield_12583",
+      "instance2_id": "customfield_12606",
+      "field_type": "datetime",
+      "description": "Timestamp when shoot was completed"
+    },
+    "NDPU Uploaded Timestamp": {
+      "instance1_id": "customfield_12585",
+      "instance2_id": "customfield_12608",
+      "field_type": "datetime",
+      "description": "Timestamp when media was uploaded"
+    },
+    "NDPU Start Edit Timestamp": {
+      "instance1_id": "customfield_12586",
+      "instance2_id": "customfield_12607",
+      "field_type": "datetime",
+      "description": "Timestamp when editing started"
+    },
+    "NDPU MP Ready Timestamp": {
+      "instance1_id": "customfield_12587",
+      "instance2_id": "customfield_12610",
+      "field_type": "datetime",
+      "description": "Timestamp when media pro ready"
+    },
+    "NDPU Final Review Timestamp": {
+      "instance1_id": "customfield_12689",
+      "instance2_id": "customfield_12703",
+      "field_type": "datetime",
+      "description": "Timestamp of final review"
+    },
+    "NDPU Closed Timestamp": {
+      "instance1_id": "customfield_12690",
+      "instance2_id": "customfield_12704",
+      "field_type": "datetime",
+      "description": "Timestamp when issue was closed"
+    },
+    "NDPU Access Instructions": {
+      "instance1_id": "customfield_12594",
+      "instance2_id": "customfield_12611",
+      "field_type": "textarea",
+      "description": "Instructions for accessing property"
+    },
+    "NDPU MediaPro ID": {
+      "instance1_id": "customfield_12642",
+      "instance2_id": "customfield_12646",
+      "field_type": "textfield",
+      "description": "Media professional ID/email"
+    },
+    "NDPU Google Map Link": {
+      "instance1_id": "customfield_12646",
+      "instance2_id": "customfield_12650",
+      "field_type": "url",
+      "description": "Google Maps URL for property location"
+    },
+    "NDPU RelaHQ Upload Link": {
+      "instance1_id": "customfield_12688",
+      "instance2_id": "customfield_12700",
+      "field_type": "url",
+      "description": "RelaHQ upload link"
+    },
+    "NDPU Number of Expected Output": {
+      "instance1_id": "customfield_12698",
+      "instance2_id": "customfield_12713",
+      "field_type": "textfield",
+      "description": "Expected number of output files"
+    },
+    "webhook_token": {
+      "instance1_id": "customfield_12643",
+      "instance2_id": "customfield_12647",
+      "field_type": "textfield",
+      "description": "Webhook authentication token"
+    }
+  },
+  "fields_same_in_both_instances": [
+    "customfield_10600",
+    "customfield_10601",
+    "customfield_10602",
+    "customfield_10713",
+    "customfield_10714",
+    "customfield_11104",
+    "customfield_10501",
+    "customfield_11900",
+    "customfield_10614",
+    "customfield_10603",
+    "customfield_10707",
+    "customfield_11602",
+    "customfield_11601",
+    "customfield_12573",
+    "customfield_12200",
+    "customfield_10711",
+    "customfield_10610",
+    "customfield_12543",
+    "customfield_11400"
+  ],
+  "fields_only_in_instance1": [
+    {
+      "field_id": "customfield_10716",
+      "field_name": "NDPU Edited Media Revision Notes",
+      "field_type": "textarea"
+    },
+    {
+      "field_id": "customfield_12521",
+      "field_name": "NDPU Return Home Miles",
+      "field_type": "float"
+    },
+    {
+      "field_id": "customfield_12662",
+      "field_name": "NDPU Order Ready",
+      "field_type": "textfield"
+    },
+    {
+      "field_id": "customfield_12674",
+      "field_name": "NDPU Home Measurement Flag",
+      "field_type": "multicheckboxes"
+    }
+  ],
+  "fields_only_in_instance2": [
+    {
+      "field_id": "customfield_12612",
+      "field_name": "NDPU Special Instructions",
+      "field_type": "textarea"
+    },
+    {
+      "field_id": "customfield_12661",
+      "field_name": "NDPU Reviewed",
+      "field_type": "select"
+    }
+  ]
+}
