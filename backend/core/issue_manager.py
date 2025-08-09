@@ -6,6 +6,7 @@ from typing import List, Optional
 from datetime import datetime
 
 from core.db.db_issues import get_issue_by_key, get_project_issues as db_get_project_issues, get_issues_since
+from core.cache import cache_result
 from models.schemas import JiraIssue, JiraField
 
 logger = logging.getLogger(__name__)
@@ -14,6 +15,7 @@ logger = logging.getLogger(__name__)
 class IssueManager:
     """Manages JIRA issue operations"""
     
+    @cache_result("issues", ttl=110)
     def get_issue(self, issue_key: str) -> Optional[JiraIssue]:
         """Get a single issue by key"""
         try:
@@ -28,6 +30,7 @@ class IssueManager:
             logger.error(f"Failed to get issue {issue_key}: {e}")
             raise
     
+    @cache_result("search", ttl=110)
     def search_issues(self, query: str, limit: int = 10) -> List[JiraIssue]:
         """Search for issues by key pattern"""
         try:
@@ -44,6 +47,7 @@ class IssueManager:
             logger.error(f"Failed to search issues: {e}")
             raise
     
+    @cache_result("project", ttl=110)
     def get_project_issues(self, project_key: str, limit: int = 50, offset: int = 0) -> List[JiraIssue]:
         """Get all issues for a project"""
         try:
@@ -53,6 +57,7 @@ class IssueManager:
             logger.error(f"Failed to get project issues: {e}")
             raise
     
+    @cache_result("recent", ttl=110)
     def get_recent_issues(self, limit: int = 10) -> List[JiraIssue]:
         """Get recently updated issues"""
         try:

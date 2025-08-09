@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Search, Check, AlertCircle } from 'lucide-react'
@@ -31,9 +31,12 @@ export function FieldSearchInput({
   const dropdownRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // Get fields for the specific instance
+  // Get fields for the specific instance - memoize to prevent recreating on every render
   const instanceFields = cachedFields?.fields?.[instance] || { system: [], custom: [] }
-  const allFields = [...instanceFields.system, ...instanceFields.custom]
+  const allFields = useMemo(() => 
+    [...instanceFields.system, ...instanceFields.custom],
+    [instanceFields.system, instanceFields.custom]
+  )
 
   // Initialize search term with current field name if value is set
   useEffect(() => {
@@ -44,11 +47,12 @@ export function FieldSearchInput({
         setHasInitialized(true)
       }
     }
-  }, [value, hasInitialized]) // Remove allFields from dependencies to prevent infinite loop
+  }, [value, hasInitialized, allFields])
 
   useEffect(() => {
     if (!searchTerm) {
       setFilteredFields([])
+      setSelectedIndex(0)
       return
     }
 

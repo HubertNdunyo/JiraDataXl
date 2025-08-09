@@ -733,9 +733,9 @@ async def discover_jira_fields(
     
     field_cache = FieldCacheManager()
     
-    # Get JIRA credentials
-    jira_email = os.getenv('JIRA_EMAIL')
-    jira_token = os.getenv('JIRA_ACCESS_TOKEN')
+    # Get JIRA credentials - using the correct environment variable names
+    jira_email = os.getenv('JIRA_USERNAME_1') or os.getenv('JIRA_CREATE_EMAIL')
+    jira_token = os.getenv('JIRA_PASSWORD_1') or os.getenv('JIRA_CREATE_TOKEN')
     
     if not jira_email or not jira_token:
         raise HTTPException(status_code=500, detail="JIRA credentials not configured")
@@ -746,7 +746,7 @@ async def discover_jira_fields(
     }
     
     # Discover fields from Instance 1
-    instance_1_url = os.getenv('JIRA_INSTANCE_1')
+    instance_1_url = os.getenv('JIRA_URL_1')
     if instance_1_url:
         try:
             jira1 = JiraClient(instance_1_url, jira_email, jira_token)
@@ -758,10 +758,13 @@ async def discover_jira_fields(
             results["instance_1"]["error"] = str(e)
     
     # Discover fields from Instance 2
-    instance_2_url = os.getenv('JIRA_INSTANCE_2')
+    instance_2_url = os.getenv('JIRA_URL_2')
     if instance_2_url:
         try:
-            jira2 = JiraClient(instance_2_url, jira_email, jira_token)
+            # Use instance 2 credentials if different
+            jira2_email = os.getenv('JIRA_USERNAME_2') or jira_email
+            jira2_token = os.getenv('JIRA_PASSWORD_2') or jira_token
+            jira2 = JiraClient(instance_2_url, jira2_email, jira2_token)
             fields_2 = jira2.get_fields()
             count = field_cache.cache_fields('instance_2', fields_2)
             results["instance_2"]["discovered"] = count

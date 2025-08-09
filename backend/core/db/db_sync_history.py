@@ -14,14 +14,14 @@ logger = logging.getLogger(__name__)
 
 def create_sync_run(
     sync_type: str = 'manual',
-    initiated_by: str = 'system'
+    triggered_by: str = 'system'
 ) -> str:
     """
     Create a new sync run record.
     
     Args:
         sync_type: Type of sync (manual, scheduled, forced)
-        initiated_by: User or system that initiated the sync
+        triggered_by: User or system that initiated the sync
         
     Returns:
         sync_id: UUID of the created sync run
@@ -29,8 +29,8 @@ def create_sync_run(
     sync_id = str(uuid.uuid4())
     
     query = """
-    INSERT INTO jira_sync.sync_runs (
-        sync_id, started_at, status, sync_type, initiated_by
+    INSERT INTO sync_history (
+        sync_id, start_time, status, sync_type, triggered_by
     ) VALUES (%s, %s, %s, %s, %s)
     """
     
@@ -39,7 +39,7 @@ def create_sync_run(
             with conn.cursor() as cursor:
                 cursor.execute(
                     query,
-                    (sync_id, datetime.now(), 'running', sync_type, initiated_by)
+                    (sync_id, datetime.now(), 'running', sync_type, triggered_by)
                 )
                 conn.commit()
                 logger.info(f"Created sync run {sync_id}")
@@ -79,21 +79,14 @@ def update_sync_run(
         updates.append("status = %s")
         params.append(status)
     
-    if total_projects is not None:
-        updates.append("total_projects = %s")
-        params.append(total_projects)
-    
+    # Map project stats to issue columns (for backward compatibility)
     if successful_projects is not None:
-        updates.append("successful_projects = %s")
+        updates.append("issues_created = %s")
         params.append(successful_projects)
     
     if failed_projects is not None:
-        updates.append("failed_projects = %s")
+        updates.append("issues_failed = %s")
         params.append(failed_projects)
-    
-    if empty_projects is not None:
-        updates.append("empty_projects = %s")
-        params.append(empty_projects)
     
     if total_issues is not None:
         updates.append("total_issues = %s")
@@ -104,9 +97,9 @@ def update_sync_run(
         params.append(error_message[:1000])  # Truncate long error messages
     
     if completed:
-        updates.append("completed_at = %s")
+        updates.append("end_time = %s")
         params.append(datetime.now())
-        updates.append("duration_seconds = EXTRACT(EPOCH FROM (%s - started_at))")
+        updates.append("duration_seconds = EXTRACT(EPOCH FROM (%s - start_time))")
         params.append(datetime.now())
     
     if not updates:
@@ -116,7 +109,7 @@ def update_sync_run(
     params.append(sync_id)
     
     query = f"""
-    UPDATE jira_sync.sync_runs 
+    UPDATE sync_history 
     SET {', '.join(updates)}
     WHERE sync_id = %s
     """
@@ -161,39 +154,38 @@ def get_sync_history(
         params.append(status)
     
     if start_date:
-        conditions.append("started_at >= %s")
+        conditions.append("start_time >= %s")
         params.append(start_date)
     
     if end_date:
-        conditions.append("started_at <= %s")
+        conditions.append("start_time <= %s")
         params.append(end_date)
     
     where_clause = "WHERE " + " AND ".join(conditions) if conditions else ""
     
     # Count query
     count_query = f"""
-    SELECT COUNT(*) FROM jira_sync.sync_runs {where_clause}
+    SELECT COUNT(*) FROM sync_history {where_clause}
     """
     
     # Data query
     data_query = f"""
     SELECT 
         sync_id,
-        started_at,
-        completed_at,
+        start_time as started_at,
+        end_time as completed_at,
         duration_seconds,
         status,
         sync_type,
-        total_projects,
-        successful_projects,
-        failed_projects,
-        empty_projects,
         total_issues,
+        issues_created as total_projects,
+        issues_updated as successful_projects,
+        issues_failed as failed_projects,
         error_message,
-        initiated_by
-    FROM jira_sync.sync_runs 
+        triggered_by
+    FROM sync_history 
     {where_clause}
-    ORDER BY started_at DESC
+    ORDER BY start_time DESC
     LIMIT %s OFFSET %s
     """
     
@@ -239,20 +231,19 @@ def get_sync_run_details(sync_id: str) -> Optional[Dict[str, Any]]:
     query = """
     SELECT 
         sync_id,
-        started_at,
-        completed_at,
+        start_time as started_at,
+        end_time as completed_at,
         duration_seconds,
         status,
         sync_type,
-        total_projects,
-        successful_projects,
-        failed_projects,
-        empty_projects,
         total_issues,
+        issues_created as total_projects,
+        issues_updated as successful_projects,
+        issues_failed as failed_projects,
         error_message,
-        initiated_by,
+        triggered_by,
         created_at
-    FROM jira_sync.sync_runs 
+    FROM sync_history 
     WHERE sync_id = %s
     """
     
@@ -283,20 +274,16 @@ def get_latest_sync_run() -> Optional[Dict[str, Any]]:
     query = """
     SELECT 
         sync_id,
-        started_at,
-        completed_at,
+        start_time,
+        end_time,
         duration_seconds,
         status,
         sync_type,
-        total_projects,
-        successful_projects,
-        failed_projects,
-        empty_projects,
         total_issues,
         error_message,
-        initiated_by
-    FROM jira_sync.sync_runs 
-    ORDER BY started_at DESC
+        triggered_by
+    FROM sync_history 
+    ORDER BY start_time DESC
     LIMIT 1
     """
     
@@ -328,8 +315,8 @@ def cleanup_old_sync_runs(days_to_keep: int = 30) -> int:
         Number of records deleted
     """
     query = """
-    DELETE FROM jira_sync.sync_runs 
-    WHERE started_at < NOW() - INTERVAL '%s days'
+    DELETE FROM sync_history 
+    WHERE start_time < NOW() - INTERVAL '%s days'
     """
     
     try:
@@ -361,7 +348,7 @@ def get_sync_run_id(sync_id: str) -> Optional[int]:
     Returns:
         Internal database ID or None if not found
     """
-    query = "SELECT id FROM jira_sync.sync_runs WHERE sync_id = %s"
+    query = "SELECT id FROM sync_history WHERE sync_id = %s"
     
     try:
         with get_db_connection() as conn:
@@ -390,15 +377,9 @@ def create_project_sync_record(
     Returns:
         ID of created record or None if failed
     """
-    # Get sync_run_id first
-    sync_run_id = get_sync_run_id(sync_id)
-    if not sync_run_id:
-        logger.error(f"Sync run {sync_id} not found")
-        return None
-    
     query = """
-    INSERT INTO jira_sync.sync_project_details (
-        sync_run_id, project_key, instance, started_at, status
+    INSERT INTO sync_project_details (
+        sync_id, project_key, project_name, issues_synced, sync_time
     ) VALUES (%s, %s, %s, %s, %s)
     RETURNING id
     """
@@ -408,7 +389,7 @@ def create_project_sync_record(
             with conn.cursor() as cursor:
                 cursor.execute(
                     query,
-                    (sync_run_id, project_key, instance, datetime.now(), 'running')
+                    (sync_id, project_key, instance, 0, datetime.now())
                 )
                 conn.commit()
                 result = cursor.fetchone()
@@ -468,9 +449,9 @@ def update_project_sync_record(
         params.append(error_message[:1000])
     
     if completed:
-        updates.append("completed_at = %s")
+        updates.append("end_time = %s")
         params.append(datetime.now())
-        updates.append("duration_seconds = EXTRACT(EPOCH FROM (%s - started_at))")
+        updates.append("duration_seconds = EXTRACT(EPOCH FROM (%s - start_time))")
         params.append(datetime.now())
     
     if not updates:
@@ -479,7 +460,7 @@ def update_project_sync_record(
     params.append(project_sync_id)
     
     query = f"""
-    UPDATE jira_sync.sync_project_details 
+    UPDATE sync_project_details 
     SET {', '.join(updates)}
     WHERE id = %s
     """
@@ -509,8 +490,8 @@ def get_project_sync_details(sync_id: str) -> List[Dict[str, Any]]:
     SELECT 
         pd.project_key,
         pd.instance,
-        pd.started_at,
-        pd.completed_at,
+        pd.start_time,
+        pd.end_time,
         pd.duration_seconds,
         pd.status,
         pd.issues_processed,
@@ -519,10 +500,9 @@ def get_project_sync_details(sync_id: str) -> List[Dict[str, Any]]:
         pd.issues_failed,
         pd.error_message,
         pd.retry_count
-    FROM jira_sync.sync_project_details pd
-    JOIN jira_sync.sync_runs sr ON pd.sync_run_id = sr.id
-    WHERE sr.sync_id = %s
-    ORDER BY pd.started_at
+    FROM sync_project_details pd
+    WHERE pd.sync_id = %s
+    ORDER BY pd.start_time
     """
     
     try:
@@ -558,21 +538,18 @@ def record_performance_metric(
     Returns:
         bool: True if recorded successfully
     """
-    sync_run_id = get_sync_run_id(sync_id)
-    if not sync_run_id:
-        return False
-    
     query = """
-    INSERT INTO jira_sync.sync_performance_metrics (
-        sync_run_id, metric_name, metric_value, metric_unit
+    INSERT INTO sync_performance_metrics (
+        sync_id, metric_name, metric_value, metric_unit
     ) VALUES (%s, %s, %s, %s)
     """
     
     try:
         with get_db_connection() as conn:
             with conn.cursor() as cursor:
-                cursor.execute(query, (sync_run_id, metric_name, metric_value, metric_unit))
+                cursor.execute(query, (sync_id, metric_name, metric_value, metric_unit))
                 conn.commit()
+                logger.debug(f"Performance metric recorded: {metric_name}={metric_value}{metric_unit} for sync {sync_id}")
                 return True
     except Exception as e:
         logger.error(f"Failed to record performance metric: {e}")
@@ -595,10 +572,9 @@ def get_performance_metrics(sync_id: str) -> List[Dict[str, Any]]:
         metric_value,
         metric_unit,
         recorded_at
-    FROM jira_sync.sync_performance_metrics pm
-    JOIN jira_sync.sync_runs sr ON pm.sync_run_id = sr.id
-    WHERE sr.sync_id = %s
-    ORDER BY pm.recorded_at
+    FROM sync_performance_metrics
+    WHERE sync_id = %s
+    ORDER BY recorded_at
     """
     
     try:

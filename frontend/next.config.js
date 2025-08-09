@@ -2,11 +2,15 @@
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
+  output: 'standalone',  // For production Docker builds
   async rewrites() {
+    // In Docker, use container name; otherwise use localhost
+    const apiUrl = process.env.BACKEND_URL || 'http://localhost:8987'
+    console.log('API rewrites configured to:', apiUrl)
     return [
       {
         source: '/api/:path*',
-        destination: 'http://127.0.0.1:8987/api/:path*',
+        destination: `${apiUrl}/api/:path*`,
       },
     ]
   }

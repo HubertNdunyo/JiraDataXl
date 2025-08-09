@@ -12,6 +12,7 @@ sys.path.append(str(Path(__file__).parent.parent.parent.parent))
 
 from models.schemas import JiraIssue, IssueSearchRequest
 from core.issue_manager import IssueManager
+from core.cache import cache_result
 
 router = APIRouter()
 logger = logging.getLogger(__name__)

@@ -13,7 +13,7 @@ import logging
 # Add parent directory to path to import existing modules
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
-from api import sync_routes, issue_routes, config_routes, status_routes, admin_routes_v2, scheduler_routes, inua_test_routes
+from api import sync_routes, issue_routes, config_routes, status_routes, admin_routes_v2, scheduler_routes
 from models.schemas import HealthCheck
 from core.database import init_db
 from core.sync_manager import SyncManager
@@ -101,7 +101,6 @@ app.include_router(config_routes.router, prefix="/api/config", tags=["config"])
 app.include_router(status_routes.router, prefix="/api/status", tags=["status"])
 app.include_router(admin_routes_v2.router, prefix="/api/admin", tags=["admin"])
 app.include_router(scheduler_routes.router, prefix="/api/scheduler", tags=["scheduler"])
-app.include_router(inua_test_routes.router, tags=["inua-test"])
 
 
 @app.get("/", response_model=HealthCheck)

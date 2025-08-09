@@ -1,0 +1,129 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: jira-sync-postgres
+    environment:
+      POSTGRES_DB: ${DB_NAME:-jira_sync}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/init-scripts:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - jira-sync-network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: jira-sync-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: >
+      redis-server 
+      --appendonly yes 
+      --maxmemory 256mb 
+      --maxmemory-policy allkeys-lru
+      --save 60 1
+      --save 300 10
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - jira-sync-network
+
+  # Backend API (FastAPI)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: jira-sync-backend
+    env_file:
+      - .env
+    environment:
+      # Override for container networking
+      DB_HOST: postgres
+      REDIS_HOST: redis
+      API_HOST: 0.0.0.0
+      ENV: development
+      PYTHONUNBUFFERED: 1
+    ports:
+      - "8987:8987"
+    volumes:
+      - ./backend:/app
+      - backend_venv:/app/venv  # Persist venv for faster rebuilds
+      - ./logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: >
+      sh -c "
+        pip install --upgrade pip &&
+        pip install -r requirements.txt &&
+        uvicorn main:app --host 0.0.0.0 --port 8987 --reload
+      "
+    networks:
+      - jira-sync-network
+    restart: unless-stopped
+
+  # Frontend (Next.js)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: jira-sync-frontend
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8987
+      NODE_ENV: development
+    ports:
+      - "5648:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules  # Anonymous volume for node_modules
+      - /app/.next  # Anonymous volume for build cache
+    depends_on:
+      - backend
+    command: >
+      sh -c "
+        npm install &&
+        npm run dev
+      "
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/health', (r) => {if (r.statusCode !== 200) process.exit(1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - jira-sync-network
+    restart: unless-stopped
+
+networks:
+  jira-sync-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.25.0.0/16
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  backend_venv:
+    driver: local

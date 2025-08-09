@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -830,6 +830,15 @@ export function MappingWizard({ open, onClose, onComplete, cachedFields, existin
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <span>Field Mapping Wizard</span>
+          </DialogTitle>
+          <DialogDescription>
+            {currentStep === 'welcome' && 'Configure field mappings between JIRA instances'}
+            {currentStep === 'mode' && 'Choose how you want to configure field mappings'}
+            {currentStep === 'selection' && 'Select fields to map'}
+            {currentStep === 'mapping' && 'Map fields between instances'}
+            {currentStep === 'review' && 'Review and save your field mappings'}
+          </DialogDescription>
+          <div className="absolute top-4 right-4">
             <Button
               variant="ghost"
               size="sm"
@@ -838,11 +847,11 @@ export function MappingWizard({ open, onClose, onComplete, cachedFields, existin
             >
               <X className="h-4 w-4" />
             </Button>
-          </DialogTitle>
-          <div className="mt-4">
-            <Progress value={getProgress()} className="h-2" />
           </div>
         </DialogHeader>
+        <div className="mt-4">
+          <Progress value={getProgress()} className="h-2" />
+        </div>
 
         <div className="min-h-[400px] py-6">
           {renderStepContent()}

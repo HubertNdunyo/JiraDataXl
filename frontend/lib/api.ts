@@ -1,14 +1,18 @@
 // API configuration utility
 
 export const getApiUrl = () => {
-  // Use environment variable if available
-  if (process.env.NEXT_PUBLIC_API_URL) {
-    return process.env.NEXT_PUBLIC_API_URL
+  // In browser, use relative URLs to go through Next.js proxy
+  if (typeof window !== 'undefined') {
+    return ''  // Empty string means use relative URLs
   }
   
-  // For security, backend only listens on localhost
-  // All API calls should go through localhost, even when frontend is accessed via IP
-  return 'http://localhost:8987'
+  // Server-side: use backend container name in Docker
+  if (process.env.BACKEND_URL) {
+    return process.env.BACKEND_URL
+  }
+  
+  // Fallback
+  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8987'
 }
 
 export const apiUrl = getApiUrl()

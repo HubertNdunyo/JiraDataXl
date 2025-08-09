@@ -14,6 +14,7 @@ from .db.db_sync_history import (
     get_latest_sync_run,
     record_performance_metric
 )
+from .cache import get_cache
 from models.schemas import SyncProgress, SyncStatistics, SyncStatus
 
 logger = logging.getLogger(__name__)
@@ -40,7 +41,7 @@ class SyncManager:
             self.stop_sync()
         
         # Create sync run in database
-        sync_id = create_sync_run(sync_type=sync_type, initiated_by=initiated_by)
+        sync_id = create_sync_run(sync_type=sync_type, triggered_by=initiated_by)
         self.current_sync_id = sync_id
         self.sync_start_time = datetime.now()
         self._is_running = True
@@ -84,6 +85,11 @@ class SyncManager:
                 logger.warning(f"Could not get sync stats from app: {e}")
             
             if success and stats:
+                # Invalidate Redis cache after successful sync
+                cache = get_cache()
+                cache.invalidate_sync_cache()
+                logger.info("Redis cache invalidated after successful sync")
+                
                 # Update database with actual statistics
                 update_sync_run(
                     sync_id=sync_id,

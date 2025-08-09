@@ -17,8 +17,8 @@ class FieldCacheManager:
     """Manages JIRA field cache in the database."""
     
     def __init__(self):
-        # Use jira_sync schema like other modules
-        self.schema = 'jira_sync'
+        # Use public schema (tables are in public, not jira_sync)
+        self.schema = 'public'
         
     @contextmanager
     def get_cursor(self, dict_cursor=True):
@@ -43,7 +43,7 @@ class FieldCacheManager:
             cursor.execute(f"CREATE SCHEMA IF NOT EXISTS {self.schema}")
         
         create_table_sql = f"""
-        CREATE TABLE IF NOT EXISTS {self.schema}.jira_field_cache (
+        CREATE TABLE IF NOT EXISTS jira_field_cache (
             id SERIAL PRIMARY KEY,
             instance VARCHAR(50) NOT NULL,
             field_id VARCHAR(255) NOT NULL,
@@ -53,15 +53,28 @@ class FieldCacheManager:
             is_array BOOLEAN DEFAULT false,
             schema_info JSONB,
             discovered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE(instance, field_id)
+            CONSTRAINT unique_instance_field UNIQUE(instance, field_id)
         );
         
+        -- Add the unique constraint if it doesn't exist (for existing tables)
+        DO $$
+        BEGIN
+            IF NOT EXISTS (
+                SELECT 1 FROM pg_constraint 
+                WHERE conname = 'unique_instance_field'
+            ) THEN
+                ALTER TABLE jira_field_cache 
+                ADD CONSTRAINT unique_instance_field 
+                UNIQUE(instance, field_id);
+            END IF;
+        END $$;
+        
         CREATE INDEX IF NOT EXISTS idx_field_cache_instance 
-            ON {self.schema}.jira_field_cache(instance);
+            ON jira_field_cache(instance);
         CREATE INDEX IF NOT EXISTS idx_field_cache_field_id 
-            ON {self.schema}.jira_field_cache(field_id);
+            ON jira_field_cache(field_id);
         CREATE INDEX IF NOT EXISTS idx_field_cache_discovered_at 
-            ON {self.schema}.jira_field_cache(discovered_at);
+            ON jira_field_cache(discovered_at);
         """
         
         with self.get_cursor(dict_cursor=False) as cursor:
@@ -82,16 +95,20 @@ class FieldCacheManager:
         if not fields:
             return 0
             
-        # Clear existing cache for this instance
-        with self.get_cursor(dict_cursor=False) as cursor:
-            cursor.execute(
-                f"DELETE FROM {self.schema}.jira_field_cache WHERE instance = %s",
-                (instance,)
-            )
+        # Clear existing cache for this instance - in its own transaction
+        try:
+            with self.get_cursor(dict_cursor=False) as cursor:
+                cursor.execute(
+                    f"DELETE FROM jira_field_cache WHERE instance = %s",
+                    (instance,)
+                )
+            logger.info(f"Cleared existing cache for {instance}")
+        except Exception as e:
+            logger.warning(f"Could not clear existing cache for {instance}: {e}")
         
         # Insert new field data
         insert_sql = f"""
-        INSERT INTO {self.schema}.jira_field_cache 
+        INSERT INTO jira_field_cache 
             (instance, field_id, field_name, field_type, is_custom, is_array, schema_info)
         VALUES (%s, %s, %s, %s, %s, %s, %s)
         ON CONFLICT (instance, field_id) 
@@ -105,23 +122,25 @@ class FieldCacheManager:
         """
         
         count = 0
-        with self.get_cursor(dict_cursor=False) as cursor:
-            for field in fields:
-                try:
-                    # Extract field information
-                    field_id = field.get('id', '')
-                    field_name = field.get('name', '')
-                    is_custom = field.get('custom', False)
-                    
-                    # Extract schema information
-                    schema = field.get('schema', {})
-                    field_type = schema.get('type', 'unknown')
-                    is_array = field_type == 'array'
-                    
-                    # If it's an array, get the item type
-                    if is_array and 'items' in schema:
-                        field_type = f"array[{schema['items']}]"
-                    
+        # Process each field in a separate transaction to avoid aborting on error
+        for field in fields:
+            try:
+                # Extract field information
+                field_id = field.get('id', '')
+                field_name = field.get('name', '')
+                is_custom = field.get('custom', False)
+                
+                # Extract schema information
+                schema = field.get('schema', {})
+                field_type = schema.get('type', 'unknown')
+                is_array = field_type == 'array'
+                
+                # If it's an array, get the item type
+                if is_array and 'items' in schema:
+                    field_type = f"array[{schema['items']}]"
+                
+                # Each field gets its own transaction
+                with self.get_cursor(dict_cursor=False) as cursor:
                     cursor.execute(insert_sql, (
                         instance,
                         field_id,
@@ -131,10 +150,10 @@ class FieldCacheManager:
                         is_array,
                         Json(schema) if schema else None
                     ))
-                    count += 1
-                except Exception as e:
-                    logger.error(f"Error caching field {field.get('id', 'unknown')}: {e}")
-                    continue
+                count += 1
+            except Exception as e:
+                logger.error(f"Error caching field {field.get('id', 'unknown')}: {e}")
+                continue
         
         logger.info(f"Cached {count} fields for {instance}")
         return count
@@ -159,7 +178,7 @@ class FieldCacheManager:
             is_array,
             schema_info,
             discovered_at
-        FROM {self.schema}.jira_field_cache
+        FROM jira_field_cache
         """
         
         params = []
@@ -194,7 +213,7 @@ class FieldCacheManager:
             is_array,
             schema_info,
             discovered_at
-        FROM {self.schema}.jira_field_cache
+        FROM jira_field_cache
         WHERE (
             LOWER(field_name) LIKE LOWER(%s) OR
             LOWER(field_id) LIKE LOWER(%s)
@@ -241,7 +260,7 @@ class FieldCacheManager:
             field_type,
             is_custom,
             similarity(LOWER(field_name), LOWER(%s)) as name_similarity
-        FROM {self.schema}.jira_field_cache
+        FROM jira_field_cache
         WHERE similarity(LOWER(field_name), LOWER(%s)) > 0.3
         """
         
@@ -281,7 +300,7 @@ class FieldCacheManager:
             COUNT(CASE WHEN is_custom THEN 1 END) as custom_fields,
             COUNT(CASE WHEN NOT is_custom THEN 1 END) as system_fields,
             MAX(discovered_at) as last_updated
-        FROM {self.schema}.jira_field_cache
+        FROM jira_field_cache
         GROUP BY instance
         """
         
