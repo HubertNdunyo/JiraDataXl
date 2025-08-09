@@ -112,7 +112,12 @@ async def verify_admin_key(x_admin_key: Optional[str] = Header(None)):
     if x_admin_key and not re.match(r'^[a-zA-Z0-9\-]+$', x_admin_key):
         raise HTTPException(status_code=400, detail="Invalid API key format")
     
-    admin_key = os.getenv('ADMIN_API_KEY', 'jira-admin-key-2024')
+    admin_key = os.getenv('ADMIN_API_KEY')
+    if not admin_key:
+        raise HTTPException(
+            status_code=500, 
+            detail="Admin API key not configured. Please set ADMIN_API_KEY environment variable."
+        )
     if not x_admin_key or x_admin_key != admin_key:
         raise HTTPException(status_code=401, detail="Unauthorized")
     return True
@@ -200,7 +205,7 @@ async def get_sync_config(authorized: bool = Depends(verify_admin_key)):
         if config:
             return config['value']
         else:
-            return {"interval": 60, "enabled": False}
+            return {"interval_minutes": 60, "enabled": False}
     except Exception as e:
         logger.error(f"Error fetching sync config: {e}")
         raise HTTPException(status_code=500, detail=str(e))

@@ -1,4 +1,4 @@
 {
-  "interval": 2,
+  "interval_minutes": 2,
   "enabled": true
 }

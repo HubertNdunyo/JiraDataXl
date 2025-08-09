@@ -2,6 +2,7 @@
 """Test the validation endpoint"""
 import requests
 import json
+import os
 from core.db.db_config import get_configuration
 
 # Get the current config from DB
@@ -19,7 +20,7 @@ if config:
     response = requests.post(
         'http://127.0.0.1:8987/api/admin/config/field-mappings/validate',
         json=data,
-        headers={'X-Admin-Key': 'jira-admin-key-2024'}
+        headers={'X-Admin-Key': os.getenv('ADMIN_API_KEY', 'test-api-key')}
     )
     
     print(f"\nValidation response status: {response.status_code}")

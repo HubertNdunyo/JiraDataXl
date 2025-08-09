@@ -37,10 +37,10 @@ class SyncScheduler:
             if self.config_file.exists():
                 with open(self.config_file, 'r') as f:
                     return json.load(f)
-            return {"interval": 5, "enabled": True}  # Default config
+            return {"interval_minutes": 5, "enabled": True}  # Default config
         except Exception as e:
             logger.error(f"Failed to load sync config: {e}")
-            return {"interval": 5, "enabled": True}
+            return {"interval_minutes": 5, "enabled": True}
     
     def save_config(self, config: Dict):
         """Save sync configuration to file"""
@@ -118,7 +118,7 @@ class SyncScheduler:
                 logger.info("Sync scheduler is disabled in config")
                 return
             
-            interval_minutes = config.get('interval', 5)
+            interval_minutes = config.get('interval_minutes', 5)
             
             # Remove existing job if any
             if self.scheduler.get_job(self.job_id):
@@ -161,7 +161,7 @@ class SyncScheduler:
         """Update the sync interval"""
         try:
             config = self.load_config()
-            config['interval'] = interval_minutes
+            config['interval_minutes'] = interval_minutes
             self.save_config(config)
             
             # Restart scheduler with new interval
@@ -201,7 +201,7 @@ class SyncScheduler:
         config = self.load_config()
         return {
             "enabled": config.get('enabled', True),
-            "interval_minutes": config.get('interval', 5),
+            "interval_minutes": config.get('interval_minutes', 5),
             "is_running": self.is_running and self.scheduler.running,
             "next_run_time": self.get_next_run_time()
         }

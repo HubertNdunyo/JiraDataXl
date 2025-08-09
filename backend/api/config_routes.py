@@ -24,7 +24,7 @@ async def get_sync_config():
             with open(CONFIG_FILE, 'r') as f:
                 data = json.load(f)
                 return SyncConfig(
-                    interval_minutes=data.get('interval', 2),
+                    interval_minutes=data.get('interval_minutes', 2),
                     enabled=data.get('enabled', True)
                 )
         else:
@@ -45,7 +45,7 @@ async def update_sync_config(config: SyncConfig):
         # Save configuration
         with open(CONFIG_FILE, 'w') as f:
             json.dump({
-                'interval': config.interval_minutes,
+                'interval_minutes': config.interval_minutes,
                 'enabled': config.enabled
             }, f, indent=2)
         
