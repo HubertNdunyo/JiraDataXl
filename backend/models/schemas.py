@@ -1,7 +1,7 @@
 """
 Pydantic models for API request/response schemas
 """
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, AliasChoices
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 from enum import Enum
@@ -26,7 +26,12 @@ class HealthCheck(BaseModel):
 
 class SyncConfig(BaseModel):
     """Sync configuration"""
-    interval_minutes: int = Field(ge=2, le=1440, description="Sync interval in minutes (minimum 2)")
+    interval_minutes: int = Field(
+        ge=2,
+        le=1440,
+        description="Sync interval in minutes (minimum 2)",
+        validation_alias=AliasChoices("interval_minutes", "interval"),
+    )
     enabled: bool = Field(default=True, description="Whether automatic sync is enabled")
     
     model_config = ConfigDict(from_attributes=True)
