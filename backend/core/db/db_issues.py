@@ -78,30 +78,48 @@ def create_issues_table():
         logger.error(f"Failed to create issues table: {e}")
         raise IssueError(f"Table creation failed: {e}")
 
-def batch_insert_issues(issues_data: List[tuple], batch_size: int = BATCH_SIZE) -> int:
+def batch_insert_issues(issues_data: List[tuple], batch_size: int = BATCH_SIZE) -> Tuple[int, int, int]:
     """
     Insert or update issues in batches with improved error handling and performance.
-    
+
     Args:
         issues_data: List of tuples containing issue data
         batch_size: Number of records to process in each batch
-        
+
     Returns:
-        int: Number of issues processed successfully
-        
+        Tuple containing:
+            - total issues processed
+            - number of issues created
+            - number of issues updated
+
     Raises:
         IssueError: If batch processing fails
     """
     if not issues_data:
         logger.info("No issues to insert or update")
-        return 0
+        return 0, 0, 0
 
     total_processed = 0
+    created_count = 0
+    updated_count = 0
     start_time = datetime.now()
 
     try:
         with get_db_connection() as conn:
             with conn.cursor() as cursor:
+                # Determine which issues already exist for created/updated counts
+                try:
+                    issue_keys = [record[0] for record in issues_data]
+                    cursor.execute(
+                        "SELECT issue_key FROM jira_issues_v2 WHERE issue_key = ANY(%s)",
+                        (issue_keys,)
+                    )
+                    existing_keys = {row[0] for row in cursor.fetchall()}
+                    created_count = len(issue_keys) - len(existing_keys)
+                    updated_count = len(existing_keys)
+                except Exception as e:
+                    logger.warning(f"Failed to calculate created vs updated counts: {e}")
+
                 # Create parameter placeholders
                 placeholders = ','.join(['%s'] * len(ISSUE_COLUMNS))
                 query = f"""
@@ -145,7 +163,7 @@ def batch_insert_issues(issues_data: List[tuple], batch_size: int = BATCH_SIZE) 
                 for i in range(0, len(issues_data), batch_size):
                     batch = issues_data[i:i + batch_size]
                     valid_batch = []
-                    
+
                     # Validate and convert batch records
                     skipped_records = []
                     for record in batch:
@@ -166,7 +184,6 @@ def batch_insert_issues(issues_data: List[tuple], batch_size: int = BATCH_SIZE) 
                                         if record[4].lower() in ('zip', 'none', 'n/a', '-'):
                                             record[4] = None
                                         else:
-                                            # Try to extract first number
                                             import re
                                             match = re.search(r'\d+', record[4])
                                             record[4] = int(match.group()) if match else None
@@ -203,7 +220,7 @@ def batch_insert_issues(issues_data: List[tuple], batch_size: int = BATCH_SIZE) 
                         except Exception as e:
                             skipped_records.append(f"error processing {record[0] if record else 'unknown'}: {e}")
                             continue
-                    
+
                     if skipped_records:
                         sample_record = batch[0] if batch else None
                         logger.warning(
@@ -213,11 +230,11 @@ def batch_insert_issues(issues_data: List[tuple], batch_size: int = BATCH_SIZE) 
                             f"Got {len(sample_record) if sample_record else 0} columns in record: "
                             f"{list(enumerate(sample_record)) if sample_record else 'no sample'}"
                         )
-                    
+
                     if not valid_batch:
                         logger.warning(f"No valid records in batch of {len(batch)}")
                         continue
-                        
+
                     try:
                         execute_batch(cursor, query, valid_batch)
                         conn.commit()
@@ -233,18 +250,17 @@ def batch_insert_issues(issues_data: List[tuple], batch_size: int = BATCH_SIZE) 
                             )
                         else:
                             logger.error(f"Error processing batch: {e}")
-                        # Continue with next batch instead of failing completely
                         continue
 
         duration = (datetime.now() - start_time).total_seconds()
         rate = total_processed / duration if duration > 0 else 0
         logger.info(f"Processed {total_processed} issues in {duration:.2f}s ({rate:.2f} issues/s)")
-        
+
         # Update global counter
         global total_issues_processed
         total_issues_processed += total_processed
-        
-        return total_processed
+
+        return total_processed, created_count, updated_count
 
     except Exception as e:
         logger.exception("Failed to insert issues into database")

@@ -94,11 +94,10 @@ class SyncOrchestrator:
                 update_sync_run(
                     sync_id=sync_id,
                     status='completed',
-                    total_projects=stats.successful_projects + stats.failed_projects + stats.empty_projects,
-                    successful_projects=stats.successful_projects,
-                    failed_projects=stats.failed_projects,
-                    empty_projects=stats.empty_projects,
                     total_issues=stats.total_issues,
+                    issues_created=stats.total_created,
+                    issues_updated=stats.total_updated,
+                    issues_failed=0,
                     completed=True
                 )
                 
@@ -125,12 +124,14 @@ class SyncOrchestrator:
                         if project_id:
                             # Update with details
                             issues_count = stats.project_issues.get(project_key, 0)
+                            created = stats.project_created.get(project_key, 0)
+                            updated = stats.project_updated.get(project_key, 0)
                             update_project_sync_record(
                                 project_sync_id=project_id,
                                 status=project_status,
                                 issues_processed=issues_count,
-                                issues_created=0,  # TODO: Get created vs updated counts
-                                issues_updated=issues_count,  # For now, assume all are updates
+                                issues_created=created,
+                                issues_updated=updated,
                                 issues_failed=0,
                                 error_message=error_msg,
                                 completed=True
@@ -175,6 +176,9 @@ class SyncOrchestrator:
                     successful_projects=stats.successful_projects,
                     failed_projects=stats.failed_projects,
                     total_issues=stats.total_issues,
+                    issues_created=stats.total_created,
+                    issues_updated=stats.total_updated,
+                    issues_failed=0,
                     issues_per_second=stats.total_issues/duration if duration > 0 else None,
                     status=SyncStatus.STOPPED,
                     error_message=None
@@ -216,6 +220,9 @@ class SyncOrchestrator:
                 successful_projects=0,
                 failed_projects=0,
                 total_issues=0,
+                issues_created=0,
+                issues_updated=0,
+                issues_failed=0,
                 issues_per_second=None,
                 status=SyncStatus.FAILED,
                 error_message=str(e)
@@ -243,18 +250,20 @@ class SyncOrchestrator:
         """Get current sync progress"""
         if not self.is_running:
             return SyncProgress(status=SyncStatus.IDLE)
-        
-        # TODO: Get actual progress from the sync operation
-        return SyncProgress(
-            status=SyncStatus.RUNNING,
-            current_project=0,
-            total_projects=0,
-            current_issues=0,
-            total_issues=0,
-            progress_percentage=0.0,
-            started_at=self.sync_start_time,
-            updated_at=datetime.now()
-        )
+        app = self.sync_functions['get_app']()
+        if hasattr(app, 'sync_manager') and app.sync_manager:
+            progress_data = app.sync_manager.get_progress()
+            return SyncProgress(
+                status=SyncStatus.RUNNING,
+                current_project=progress_data['current_project'],
+                total_projects=progress_data['total_projects'],
+                current_issues=progress_data['current_issues'],
+                total_issues=progress_data['total_issues'],
+                progress_percentage=progress_data['progress_percentage'],
+                started_at=progress_data['started_at'],
+                updated_at=progress_data['updated_at']
+            )
+        return SyncProgress(status=SyncStatus.RUNNING, started_at=self.sync_start_time, updated_at=datetime.now())
     
     def get_status(self) -> SyncStatus:
         """Get current sync status"""
@@ -282,6 +291,10 @@ class SyncOrchestrator:
     
     def get_next_sync_time(self) -> Optional[datetime]:
         """Get the next scheduled sync time"""
-        # TODO: Implement scheduler integration
-        # For now, return None to avoid import issues
+        try:
+            from main import scheduler as main_scheduler
+            if main_scheduler:
+                return main_scheduler.get_next_run_time()
+        except Exception:
+            pass
         return None

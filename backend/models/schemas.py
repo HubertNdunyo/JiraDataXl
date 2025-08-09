@@ -71,6 +71,9 @@ class SyncStatistics(BaseModel):
     successful_projects: int
     failed_projects: int
     total_issues: int
+    issues_created: int = 0
+    issues_updated: int = 0
+    issues_failed: int = 0
     issues_per_second: Optional[float] = None
     status: SyncStatus
     error_message: Optional[str] = None

@@ -36,7 +36,8 @@ class IssueRepository:
             DatabaseOperationError: If insertion fails
         """
         try:
-            return batch_insert_issues(issues)
+            processed, _, _ = batch_insert_issues(issues)
+            return processed
         except Exception as e:
             logger.error(f"Failed to batch insert issues: {e}")
             raise
@@ -115,7 +116,8 @@ class IssueRepository:
         # This could be implemented if needed for single issue updates
         # For now, batch_insert with ON CONFLICT handles updates
         try:
-            return batch_insert_issues([data]) == 1
+            processed, _, _ = batch_insert_issues([data])
+            return processed == 1
         except Exception as e:
             logger.error(f"Failed to update issue {issue_key}: {e}")
             return False
