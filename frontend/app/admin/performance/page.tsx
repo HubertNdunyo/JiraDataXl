@@ -1,7 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { adminFetch, checkAdminAuth } from '@/lib/admin-api'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Slider } from '@/components/ui/slider'
@@ -66,18 +68,22 @@ export default function PerformanceConfigPage() {
   const [testing, setTesting] = useState(false)
   const [testResult, setTestResult] = useState<TestResult | null>(null)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const router = useRouter()
 
   useEffect(() => {
-    fetchConfig()
+    // Check authentication first
+    checkAdminAuth().then(isAuth => {
+      if (!isAuth) {
+        router.push('/admin/login')
+      } else {
+        fetchConfig()
+      }
+    })
   }, [])
 
   const fetchConfig = async () => {
     try {
-      const response = await fetch('/api/admin/config/performance', {
-        headers: {
-          'X-Admin-Key': 'jira-admin-key-2024'
-        }
-      })
+      const response = await adminFetch('/api/admin/config/performance')
       if (response.ok) {
         const data = await response.json()
         setConfig(data)
@@ -94,12 +100,8 @@ export default function PerformanceConfigPage() {
     setSaving(true)
     setMessage(null)
     try {
-      const response = await fetch('/api/admin/config/performance', {
+      const response = await adminFetch('/api/admin/config/performance', {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Admin-Key': 'jira-admin-key-2024'
-        },
         body: JSON.stringify(config)
       })
       
@@ -122,12 +124,8 @@ export default function PerformanceConfigPage() {
     setTesting(true)
     setTestResult(null)
     try {
-      const response = await fetch('/api/admin/config/performance/test', {
+      const response = await adminFetch('/api/admin/config/performance/test', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Admin-Key': 'jira-admin-key-2024'
-        },
         body: JSON.stringify(config)
       })
       
