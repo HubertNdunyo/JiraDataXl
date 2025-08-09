@@ -4,7 +4,7 @@ Enhanced admin routes with database configuration management
 from fastapi import APIRouter, HTTPException, Depends, Header, BackgroundTasks, Query, Path
 from typing import Optional, Dict, Any, List
 from datetime import datetime
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, AliasChoices
 import logging
 import os
 
@@ -73,7 +73,11 @@ class FieldMappingsConfig(BaseModel):
 
 
 class SyncConfig(BaseModel):
-    interval: int = Field(ge=1, le=1440)
+    interval_minutes: int = Field(
+        ge=1,
+        le=1440,
+        validation_alias=AliasChoices("interval_minutes", "interval"),
+    )
     enabled: bool = True
 
 

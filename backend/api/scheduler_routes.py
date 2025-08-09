@@ -2,7 +2,7 @@
 Scheduler management API routes
 """
 from fastapi import APIRouter, HTTPException, Request
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, AliasChoices
 from typing import Optional
 import logging
 
@@ -13,7 +13,12 @@ logger = logging.getLogger(__name__)
 class SchedulerConfig(BaseModel):
     """Scheduler configuration model"""
     enabled: bool
-    interval_minutes: int = Field(ge=2, le=1440, description="Sync interval in minutes (minimum 2)")
+    interval_minutes: int = Field(
+        ge=2,
+        le=1440,
+        description="Sync interval in minutes (minimum 2)",
+        validation_alias=AliasChoices("interval_minutes", "interval"),
+    )
 
 
 class SchedulerStatus(BaseModel):

@@ -32,7 +32,7 @@ export default function SchedulerPage() {
       if (!response.ok) throw new Error("Failed to fetch scheduler status")
       const data = await response.json()
       setStatus(data)
-      setIntervalValue([data.interval_minutes])
+      setIntervalValue([data.interval_minutes ?? data.interval])
       setEnabled(data.enabled)
     } catch (error) {
       toast({
@@ -60,6 +60,7 @@ export default function SchedulerPage() {
         body: JSON.stringify({
           enabled: enabled,
           interval_minutes: intervalValue[0],
+          interval: intervalValue[0],
         }),
       })
 
