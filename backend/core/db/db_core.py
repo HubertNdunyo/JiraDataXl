@@ -6,7 +6,8 @@ import os
 import time
 import logging
 import psycopg2
-from psycopg2 import sql, DatabaseError
+import psycopg2.extras
+from psycopg2 import sql
 from contextlib import contextmanager
 from typing import Optional
 from dotenv import load_dotenv
@@ -31,8 +32,8 @@ DB_CONFIG = {
 MAX_RETRIES = 3
 RETRY_DELAY = 5  # seconds
 
-class DatabaseError(Exception):
-    """Custom exception for database errors"""
+class DatabaseOperationError(Exception):
+    """Custom exception for database operation errors"""
     pass
 
 @contextmanager
@@ -44,7 +45,7 @@ def get_db_connection():
         psycopg2.connection: Database connection object
         
     Raises:
-        DatabaseError: If connection cannot be established after retries
+        DatabaseOperationError: If connection cannot be established after retries
     """
     conn = None
     retries = 0
@@ -99,7 +100,7 @@ def execute_query(query: str, params: Optional[tuple] = None, fetch: bool = Fals
                 
     except Exception as e:
         logger.error(f"Query execution failed: {e}")
-        raise DatabaseError(f"Query execution failed: {e}")
+        raise DatabaseOperationError(f"Query execution failed: {e}")
 
 def execute_batch(query: str, params_list: list, page_size: int = 1000):
     """
@@ -111,7 +112,7 @@ def execute_batch(query: str, params_list: list, page_size: int = 1000):
         page_size: Number of operations per batch
         
     Raises:
-        DatabaseError: If batch execution fails
+        DatabaseOperationError: If batch execution fails
     """
     try:
         with get_db_connection() as conn:
@@ -126,7 +127,7 @@ def execute_batch(query: str, params_list: list, page_size: int = 1000):
                 
     except Exception as e:
         logger.error(f"Batch execution failed: {e}")
-        raise DatabaseError(f"Batch execution failed: {e}")
+        raise DatabaseOperationError(f"Batch execution failed: {e}")
 
 def check_table_exists(table_name: str) -> bool:
     """

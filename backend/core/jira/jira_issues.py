@@ -9,10 +9,9 @@ from dateutil import parser
 
 from .jira_client import JiraClient, JiraClientError
 from .field_processor import FieldProcessor
-from ..db.db_issues import batch_insert_issues
 from ..db.db_config import get_field_mapping_config
 from ..db.constants import ISSUE_COLUMNS
-from ..db.db_audit import log_operation
+from ..repositories import IssueRepository
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -22,28 +21,28 @@ class IssueProcessingError(Exception):
     pass
 
 def log_update(project_name: str, status: str, issues_count: int = 0, error_message: str = None):
-    """Log update to database."""
-    try:
-        log_operation('UPDATE', project_name, status, issues_count, error_message)
-    except Exception as e:
-        logger.error(f"Failed to log update: {e}")
+    """Log update to database using repository."""
+    repository = IssueRepository()
+    repository.log_update(project_name, status, issues_count, error_message)
 
 class IssueProcessor:
     """
     Processes JIRA issues with dynamic field mapping from configuration.
     """
     
-    def __init__(self, jira_client: JiraClient, instance_type: str):
+    def __init__(self, jira_client: JiraClient, instance_type: str, repository: Optional[IssueRepository] = None):
         """
         Initialize issue processor.
         
         Args:
             jira_client: JIRA client instance
             instance_type: Type of JIRA instance (instance_1 or instance_2)
+            repository: Optional repository for database operations (will create one if not provided)
         """
         self.jira_client = jira_client
         self.instance_type = instance_type
         self.field_processor = FieldProcessor()
+        self.repository = repository or IssueRepository()
         self._load_field_mappings()
         
     def _load_field_mappings(self):
@@ -410,7 +409,7 @@ class IssueProcessor:
             return 0
         
         try:
-            return batch_insert_issues(issues_data)
+            return self.repository.batch_insert(issues_data)
         except Exception as e:
             logger.error(f"Failed to store issues: {e}")
             raise IssueProcessingError(f"Database storage failed: {e}")
