@@ -125,7 +125,10 @@ async def get_sync_history_endpoint(
                 successful_projects=sync_run['successful_projects'],
                 failed_projects=sync_run['failed_projects'],
                 total_issues=sync_run['total_issues'],
-                issues_per_second=sync_run['total_issues'] / sync_run['duration_seconds'] 
+                issues_created=sync_run.get('issues_created', 0),
+                issues_updated=sync_run.get('issues_updated', 0),
+                issues_failed=sync_run.get('issues_failed', 0),
+                issues_per_second=sync_run['total_issues'] / sync_run['duration_seconds']
                     if sync_run['duration_seconds'] and sync_run['duration_seconds'] > 0 else None,
                 status=SyncStatus(sync_run['status']),
                 error_message=sync_run['error_message']
@@ -213,7 +216,10 @@ async def get_sync_stats(sync_id: str, request: Request):
             successful_projects=sync_run['successful_projects'],
             failed_projects=sync_run['failed_projects'],
             total_issues=sync_run['total_issues'],
-            issues_per_second=sync_run['total_issues'] / sync_run['duration_seconds'] 
+            issues_created=sync_run.get('issues_created', 0),
+            issues_updated=sync_run.get('issues_updated', 0),
+            issues_failed=sync_run.get('issues_failed', 0),
+            issues_per_second=sync_run['total_issues'] / sync_run['duration_seconds']
                 if sync_run['duration_seconds'] and sync_run['duration_seconds'] > 0 else None,
             status=SyncStatus(sync_run['status']),
             error_message=sync_run['error_message']

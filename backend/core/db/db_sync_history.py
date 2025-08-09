@@ -52,68 +52,68 @@ def create_sync_run(
 def update_sync_run(
     sync_id: str,
     status: Optional[str] = None,
-    total_projects: Optional[int] = None,
-    successful_projects: Optional[int] = None,
-    failed_projects: Optional[int] = None,
-    empty_projects: Optional[int] = None,
     total_issues: Optional[int] = None,
+    issues_created: Optional[int] = None,
+    issues_updated: Optional[int] = None,
+    issues_failed: Optional[int] = None,
     error_message: Optional[str] = None,
     completed: bool = False
 ) -> bool:
     """
     Update an existing sync run record.
-    
+
     Args:
         sync_id: UUID of the sync run
         Various optional statistics to update
         completed: Whether the sync has completed
-        
+
     Returns:
         bool: True if updated successfully
     """
-    # Build dynamic update query
     updates = []
     params = []
-    
+
     if status is not None:
         updates.append("status = %s")
         params.append(status)
-    
-    # Map project stats to issue columns (for backward compatibility)
-    if successful_projects is not None:
-        updates.append("issues_created = %s")
-        params.append(successful_projects)
-    
-    if failed_projects is not None:
-        updates.append("issues_failed = %s")
-        params.append(failed_projects)
-    
+
     if total_issues is not None:
         updates.append("total_issues = %s")
         params.append(total_issues)
-    
+
+    if issues_created is not None:
+        updates.append("issues_created = %s")
+        params.append(issues_created)
+
+    if issues_updated is not None:
+        updates.append("issues_updated = %s")
+        params.append(issues_updated)
+
+    if issues_failed is not None:
+        updates.append("issues_failed = %s")
+        params.append(issues_failed)
+
     if error_message is not None:
         updates.append("error_message = %s")
-        params.append(error_message[:1000])  # Truncate long error messages
-    
+        params.append(error_message[:1000])
+
     if completed:
         updates.append("end_time = %s")
         params.append(datetime.now())
         updates.append("duration_seconds = EXTRACT(EPOCH FROM (%s - start_time))")
         params.append(datetime.now())
-    
+
     if not updates:
-        return True  # Nothing to update
-    
-    # Add sync_id to params
+        return True
+
     params.append(sync_id)
-    
+
     query = f"""
-    UPDATE sync_history 
+    UPDATE sync_history
     SET {', '.join(updates)}
     WHERE sync_id = %s
     """
-    
+
     try:
         with get_db_connection() as conn:
             with conn.cursor() as cursor:
@@ -168,24 +168,30 @@ def get_sync_history(
     SELECT COUNT(*) FROM sync_history {where_clause}
     """
     
-    # Data query
+    # Data query with project statistics
     data_query = f"""
-    SELECT 
-        sync_id,
-        start_time as started_at,
-        end_time as completed_at,
-        duration_seconds,
-        status,
-        sync_type,
-        total_issues,
-        issues_created as total_projects,
-        issues_updated as successful_projects,
-        issues_failed as failed_projects,
-        error_message,
-        triggered_by
-    FROM sync_history 
+    SELECT
+        sh.sync_id,
+        sh.start_time as started_at,
+        sh.end_time as completed_at,
+        sh.duration_seconds,
+        sh.status,
+        sh.sync_type,
+        sh.total_issues,
+        sh.issues_created,
+        sh.issues_updated,
+        sh.issues_failed,
+        sh.error_message,
+        sh.triggered_by,
+        COALESCE(COUNT(pd.id), 0) AS total_projects,
+        COALESCE(SUM(CASE WHEN pd.status = 'completed' THEN 1 ELSE 0 END), 0) AS successful_projects,
+        COALESCE(SUM(CASE WHEN pd.status = 'failed' THEN 1 ELSE 0 END), 0) AS failed_projects
+    FROM sync_history sh
+    LEFT JOIN sync_project_details pd ON sh.sync_id = pd.sync_id
     {where_clause}
-    ORDER BY start_time DESC
+    GROUP BY sh.sync_id, sh.start_time, sh.end_time, sh.duration_seconds, sh.status, sh.sync_type,
+             sh.total_issues, sh.issues_created, sh.issues_updated, sh.issues_failed, sh.error_message, sh.triggered_by
+    ORDER BY sh.start_time DESC
     LIMIT %s OFFSET %s
     """
     
@@ -229,22 +235,29 @@ def get_sync_run_details(sync_id: str) -> Optional[Dict[str, Any]]:
         Dict with sync run details or None if not found
     """
     query = """
-    SELECT 
-        sync_id,
-        start_time as started_at,
-        end_time as completed_at,
-        duration_seconds,
-        status,
-        sync_type,
-        total_issues,
-        issues_created as total_projects,
-        issues_updated as successful_projects,
-        issues_failed as failed_projects,
-        error_message,
-        triggered_by,
-        created_at
-    FROM sync_history 
-    WHERE sync_id = %s
+    SELECT
+        sh.sync_id,
+        sh.start_time as started_at,
+        sh.end_time as completed_at,
+        sh.duration_seconds,
+        sh.status,
+        sh.sync_type,
+        sh.total_issues,
+        sh.issues_created,
+        sh.issues_updated,
+        sh.issues_failed,
+        sh.error_message,
+        sh.triggered_by,
+        sh.created_at,
+        COALESCE(COUNT(pd.id), 0) AS total_projects,
+        COALESCE(SUM(CASE WHEN pd.status = 'completed' THEN 1 ELSE 0 END), 0) AS successful_projects,
+        COALESCE(SUM(CASE WHEN pd.status = 'failed' THEN 1 ELSE 0 END), 0) AS failed_projects
+    FROM sync_history sh
+    LEFT JOIN sync_project_details pd ON sh.sync_id = pd.sync_id
+    WHERE sh.sync_id = %s
+    GROUP BY sh.sync_id, sh.start_time, sh.end_time, sh.duration_seconds, sh.status, sh.sync_type,
+             sh.total_issues, sh.issues_created, sh.issues_updated, sh.issues_failed, sh.error_message,
+             sh.triggered_by, sh.created_at
     """
     
     try:
