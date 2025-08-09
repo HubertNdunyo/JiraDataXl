@@ -3,8 +3,6 @@ Configuration API routes
 """
 from fastapi import APIRouter, HTTPException
 import logging
-import json
-from pathlib import Path
 
 from ..models.schemas import SyncConfig, SyncResponse
 from ..core.db.db_config import get_configuration, save_configuration
@@ -60,14 +58,21 @@ async def update_sync_config(config: SyncConfig):
 
 @router.get("/field-mappings")
 async def get_field_mappings():
-    """Get JIRA field mappings configuration"""
+    """Get JIRA field mappings configuration from database"""
     try:
-        mappings_file = Path(__file__).parent.parent.parent.parent / "config" / "field_mappings.json"
-        if mappings_file.exists():
-            with open(mappings_file, 'r') as f:
-                return json.load(f)
+        from ..core.db.db_config import get_field_mapping_config
+        
+        # Get field mappings from database
+        mappings = get_field_mapping_config()
+        
+        if mappings:
+            return mappings
         else:
-            return {"error": "Field mappings not found"}
+            # Return empty configuration if none exists
+            return {
+                "field_mappings": [],
+                "message": "No field mappings configured. Please use the admin panel to configure field mappings."
+            }
     except Exception as e:
-        logger.error(f"Failed to get field mappings: {e}")
+        logger.error(f"Failed to get field mappings from database: {e}")
         raise HTTPException(status_code=500, detail=str(e))

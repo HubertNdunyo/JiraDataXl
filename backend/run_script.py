@@ -34,8 +34,8 @@ SCRIPT_MODULES = {
     'migrate_configs': 'scripts.migrate_configs',
     'extract_hardcoded_mappings': 'scripts.extract_hardcoded_mappings',
     
-    # Utils root scripts
-    'clear_jira_data': 'utils.clear_jira_data',
+    # Maintenance scripts
+    'clear_jira_data': 'utils.scripts.maintenance.clear_jira_data',
 }
 
 def main():
