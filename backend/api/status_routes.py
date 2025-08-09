@@ -17,43 +17,70 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
-async def check_jira_connections() -> Dict[str, bool]:
-    """Check JIRA instance connectivity by calling /myself endpoint"""
+async def check_jira_connections(jira_instances=None) -> Dict[str, bool]:
+    """Check JIRA instance connectivity by calling /myself endpoint
+    
+    Args:
+        jira_instances: Optional list of JIRA instance configurations.
+                       If not provided, will fall back to environment variables.
+    """
     results = {}
     
-    # Check Instance 1
-    url_1 = os.getenv('JIRA_URL_1')
-    username_1 = os.getenv('JIRA_USERNAME_1')
-    password_1 = os.getenv('JIRA_PASSWORD_1')
-    
-    if url_1 and username_1 and password_1:
-        try:
-            client_1 = JiraClient(url_1, username_1, password_1)
-            # Call lightweight endpoint
-            response = await asyncio.to_thread(client_1._make_request, 'GET', '/myself')
-            results['instance_1'] = bool(response)
-        except Exception as e:
-            logger.warning(f"JIRA instance_1 health check failed: {e}")
+    if jira_instances:
+        # Use dynamic instances from application
+        for instance in jira_instances:
+            instance_type = instance.get('instance_type', instance.get('type', 'unknown'))
+            url = instance.get('url')
+            username = instance.get('username')
+            password = instance.get('password')
+            enabled = instance.get('enabled', True)
+            
+            if not enabled:
+                results[instance_type] = False
+                continue
+                
+            if url and username and password:
+                try:
+                    client = JiraClient(url, username, password)
+                    # Call lightweight endpoint
+                    response = await asyncio.to_thread(client._make_request, 'GET', '/myself')
+                    results[instance_type] = bool(response)
+                except Exception as e:
+                    logger.warning(f"JIRA {instance_type} health check failed: {e}")
+                    results[instance_type] = False
+            else:
+                results[instance_type] = False
+    else:
+        # Fall back to legacy environment variables
+        url_1 = os.getenv('JIRA_URL_1')
+        username_1 = os.getenv('JIRA_USERNAME_1')
+        password_1 = os.getenv('JIRA_PASSWORD_1')
+        
+        if url_1 and username_1 and password_1:
+            try:
+                client_1 = JiraClient(url_1, username_1, password_1)
+                response = await asyncio.to_thread(client_1._make_request, 'GET', '/myself')
+                results['instance_1'] = bool(response)
+            except Exception as e:
+                logger.warning(f"JIRA instance_1 health check failed: {e}")
+                results['instance_1'] = False
+        else:
             results['instance_1'] = False
-    else:
-        results['instance_1'] = False
-    
-    # Check Instance 2
-    url_2 = os.getenv('JIRA_URL_2')
-    username_2 = os.getenv('JIRA_USERNAME_2')
-    password_2 = os.getenv('JIRA_PASSWORD_2')
-    
-    if url_2 and username_2 and password_2:
-        try:
-            client_2 = JiraClient(url_2, username_2, password_2)
-            # Call lightweight endpoint
-            response = await asyncio.to_thread(client_2._make_request, 'GET', '/myself')
-            results['instance_2'] = bool(response)
-        except Exception as e:
-            logger.warning(f"JIRA instance_2 health check failed: {e}")
+        
+        url_2 = os.getenv('JIRA_URL_2')
+        username_2 = os.getenv('JIRA_USERNAME_2')
+        password_2 = os.getenv('JIRA_PASSWORD_2')
+        
+        if url_2 and username_2 and password_2:
+            try:
+                client_2 = JiraClient(url_2, username_2, password_2)
+                response = await asyncio.to_thread(client_2._make_request, 'GET', '/myself')
+                results['instance_2'] = bool(response)
+            except Exception as e:
+                logger.warning(f"JIRA instance_2 health check failed: {e}")
+                results['instance_2'] = False
+        else:
             results['instance_2'] = False
-    else:
-        results['instance_2'] = False
     
     return results
 
@@ -66,7 +93,8 @@ async def get_system_status(request: Request):
         db_connected = check_db_connection()
         
         # Check JIRA connections
-        jira_status = await check_jira_connections()
+        jira_instances = getattr(request.app.state, 'jira_instances', None)
+        jira_status = await check_jira_connections(jira_instances)
         
         # Get sync status
         sync_manager = request.app.state.sync_manager

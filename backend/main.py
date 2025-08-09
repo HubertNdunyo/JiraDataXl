@@ -53,9 +53,19 @@ async def lifespan(app: FastAPI):
         scheduler.start()
         logger.info("Scheduler initialized and started")
         
+        # Load JIRA instances configuration
+        try:
+            from core.app import Application
+            temp_app = Application()
+            jira_instances = temp_app.jira_instances
+        except Exception as e:
+            logger.warning(f"Could not load JIRA instances configuration: {e}")
+            jira_instances = None
+        
         # Make them available to routes
         app.state.sync_manager = sync_manager
         app.state.scheduler = scheduler
+        app.state.jira_instances = jira_instances
     except Exception as e:
         logger.error(f"Failed to initialize scheduler: {e}")
     
