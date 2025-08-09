@@ -45,6 +45,26 @@ A high-performance web application for monitoring and managing JIRA synchronizat
 - High-performance sync engine (272 issues/sec)
 - Comprehensive error handling and logging
 
+## ⚠️ BREAKING CHANGES (January 2025)
+
+### Admin Authentication Now Required
+Admin pages now require authentication for security. To access admin features:
+
+1. **Set Environment Variables**:
+   ```bash
+   # Backend (.env)
+   ADMIN_API_KEY=your-secure-admin-key-here
+   
+   # Frontend (.env.local)
+   ADMIN_API_KEY=your-secure-admin-key-here  # Must match backend
+   SESSION_SECRET=your-random-session-secret
+   ```
+
+2. **Login Required**: Navigate to `/admin/login` and enter the admin key
+3. **Session-Based**: Authentication uses secure HTTP-only cookies
+
+See [Migration Guide](./docs/guides/ADMIN_AUTH_MIGRATION.md) for details.
+
 ## Prerequisites
 
 - Docker and Docker Compose (recommended)
@@ -53,7 +73,7 @@ A high-performance web application for monitoring and managing JIRA synchronizat
   - Python 3.8+
   - PostgreSQL database
   - Redis server
-- `.env` file with required environment variables
+- `.env` file with required environment variables (see `.env.example`)
 
 ## Quick Start
 
@@ -146,7 +166,19 @@ See the `docs/` directory for detailed documentation:
 - **Database**: Optimized with proper indexes and connection pooling
 - **Monitoring**: Built-in performance metrics tracking
 
-## 🔄 Recent Updates (2025-08-08)
+## 🔄 Recent Updates (January 2025)
+
+### Security & Architecture Improvements
+- **Admin Authentication**: Removed hard-coded API keys, implemented secure login
+- **Dynamic JIRA Instances**: Support for unlimited JIRA instances (not just 2)
+- **Database Configuration**: All config now in PostgreSQL (no JSON files)
+- **Repository Pattern**: Clean separation of data access and business logic
+- **Python Package Structure**: Proper imports without sys.path hacks
+- **Next.js Layouts**: Proper nested layouts implementation
+
+See [Changelog](./docs/changelog/CHANGELOG.md) for complete details.
+
+## 🔄 Previous Updates (2025-08-08)
 
 ### Field Mapping System
 - ✅ Implemented automatic field discovery (530+ fields from both instances)
