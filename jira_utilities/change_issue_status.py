@@ -4,16 +4,12 @@ Change JIRA issue status - demonstration script
 """
 
 import os
-import sys
 from pathlib import Path
 import requests
 from requests.auth import HTTPBasicAuth
 import json
 from datetime import datetime
 from dotenv import load_dotenv
-
-# Add parent directory to path
-sys.path.append(str(Path(__file__).parent))
 
 # Load environment variables
 load_dotenv()

@@ -4,16 +4,12 @@ Script to examine JIRA project names and structure to determine the correct quer
 """
 
 import os
-import sys
 import json
 import logging
 from typing import Dict, Any, List
 
-# Add the project root to the path so we can import from core
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-
-from core.jira.jira_client import JiraClient
-from core.config.logging_config import setup_logging
+from ...core.jira.jira_client import JiraClient
+from ...core.config.logging_config import setup_logging
 from dotenv import load_dotenv
 
 # Configure logging

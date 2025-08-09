@@ -4,14 +4,10 @@ Script to check the project_mappings_v2 table and verify location name mappings.
 """
 
 import os
-import sys
 import logging
 
-# Add the project root to the path so we can import from core
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-
-from core.db.db_projects import get_all_project_mappings
-from core.config.logging_config import setup_logging
+from ...core.db.db_projects import get_all_project_mappings
+from ...core.config.logging_config import setup_logging
 
 # Configure logging
 setup_logging()

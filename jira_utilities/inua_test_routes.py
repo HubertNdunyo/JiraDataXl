@@ -5,15 +5,11 @@ from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from typing import Dict, List, Optional, Any
 import os
-import sys
 from datetime import datetime
 import requests
 from requests.auth import HTTPBasicAuth
 from pathlib import Path
 import logging
-
-# Add parent directory to import custom modules
-sys.path.append(str(Path(__file__).parent.parent.parent))
 
 # These modules are not available in the backend folder
 # TODO: Move these modules to backend or comment out this route

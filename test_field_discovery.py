@@ -4,12 +4,8 @@ Test script for JIRA field discovery functionality
 """
 
 import os
-import sys
 import json
 from dotenv import load_dotenv
-
-# Add backend to path
-sys.path.insert(0, './backend')
 
 # Load environment variables
 load_dotenv('.env')
