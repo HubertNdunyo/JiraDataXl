@@ -9,9 +9,9 @@ import os
 import asyncio
 from typing import Dict
 
-from ..models.schemas import SystemStatus, SyncStatus
-from ..core.database import check_db_connection
-from ..core.jira import JiraClient
+from models.schemas import SystemStatus, SyncStatus
+from core.database import check_db_connection
+from core.jira import JiraClient
 
 router = APIRouter()
 logger = logging.getLogger(__name__)

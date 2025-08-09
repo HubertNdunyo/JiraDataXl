@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException, BackgroundTasks, Request
 from typing import Dict
 import logging
 
-from ..models.schemas import (
+from models.schemas import (
     SyncResponse,
     SyncStartRequest,
     SyncProgress,
@@ -14,7 +14,7 @@ from ..models.schemas import (
     SyncStatistics,
     SyncStatus
 )
-from ..core.db.db_sync_history import (
+from core.db.db_sync_history import (
     get_sync_history, 
     get_sync_run_details,
     get_project_sync_details,

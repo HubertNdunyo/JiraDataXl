@@ -47,21 +47,37 @@ A high-performance web application for monitoring and managing JIRA synchronizat
 
 ## ⚠️ BREAKING CHANGES (January 2025)
 
-### Admin Authentication Now Required
-Admin pages now require authentication for security. To access admin features:
+### Enhanced Security: Admin Authentication Required
+Admin pages now implement secure server-side authentication. All sensitive API keys are handled server-side only.
 
-1. **Set Environment Variables**:
+#### Security Improvements:
+- ✅ **No hardcoded API keys in frontend code** - All removed
+- ✅ **Server-side authentication** - API keys stored only in environment variables
+- ✅ **Secure proxy pattern** - Admin requests proxied through `/api/admin/proxy`
+- ✅ **Session-based access** - HTTP-only cookies for admin sessions
+- ✅ **Automatic redirects** - Unauthorized users redirected to login
+
+#### Setup:
+1. **Configure Environment Variables**:
    ```bash
    # Backend (.env)
-   ADMIN_API_KEY=your-secure-admin-key-here
+   ADMIN_API_KEY=secure-admin-key-2024
    
    # Frontend (.env.local)
-   ADMIN_API_KEY=your-secure-admin-key-here  # Must match backend
-   SESSION_SECRET=your-random-session-secret
+   BACKEND_URL=http://backend:8987  # For Docker internal network
+   ADMIN_API_KEY=secure-admin-key-2024  # Must match backend
+   SESSION_SECRET=dev-session-secret-change-in-production-32chars
    ```
 
-2. **Login Required**: Navigate to `/admin/login` and enter the admin key
-3. **Session-Based**: Authentication uses secure HTTP-only cookies
+2. **Access Admin Panel**:
+   - Navigate to `/admin/login`
+   - Enter the admin password
+   - Session persists across page refreshes
+
+3. **Security Architecture**:
+   - Frontend uses `adminFetch()` helper for all admin API calls
+   - Proxy endpoint validates session and adds API key server-side
+   - No sensitive credentials exposed to client-side code
 
 See [Migration Guide](./docs/guides/ADMIN_AUTH_MIGRATION.md) for details.
 

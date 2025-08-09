@@ -4,8 +4,8 @@ Configuration API routes
 from fastapi import APIRouter, HTTPException
 import logging
 
-from ..models.schemas import SyncConfig, SyncResponse
-from ..core.db.db_config import get_configuration, save_configuration
+from models.schemas import SyncConfig, SyncResponse
+from core.db.db_config import get_configuration, save_configuration
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -60,7 +60,7 @@ async def update_sync_config(config: SyncConfig):
 async def get_field_mappings():
     """Get JIRA field mappings configuration from database"""
     try:
-        from ..core.db.db_config import get_field_mapping_config
+        from core.db.db_config import get_field_mapping_config
         
         # Get field mappings from database
         mappings = get_field_mapping_config()

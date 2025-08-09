@@ -116,59 +116,20 @@ export default function Dashboard() {
   }
 
   const fetchIssueCount = async () => {
-    try {
-      const response = await fetch('/api/admin/issues/count', {
-        headers: {
-          'x-admin-key': 'jira-admin-key-2024'
-        }
-      })
-      if (response.ok) {
-        const data = await response.json()
-        setIssueCount(data.total_issues)
-      }
-    } catch (error) {
-      console.error('Failed to fetch issue count:', error)
-    }
+    // Admin functionality removed from main dashboard
+    // Issue count should be fetched from regular status endpoint
+    // This prevents exposing admin endpoints to non-admin users
   }
 
   const handleClearTable = async () => {
-    setClearing(true)
-    try {
-      const response = await fetch('/api/admin/clear-issues-table', {
-        method: 'DELETE',
-        headers: {
-          'x-admin-key': 'jira-admin-key-2024',
-          'x-user': 'dashboard-user'
-        }
-      })
-      
-      if (response.ok) {
-        const data = await response.json()
-        toast({
-          title: "Table Cleared Successfully",
-          description: `Deleted ${data.records_deleted} records from jira_issues_v2 table`,
-        })
-        setIssueCount(0)
-        fetchStatus() // Refresh the dashboard
-      } else {
-        const error = await response.text()
-        toast({
-          title: "Failed to Clear Table",
-          description: error || "An error occurred while clearing the table",
-          variant: "destructive"
-        })
-      }
-    } catch (error) {
-      console.error('Failed to clear table:', error)
-      toast({
-        title: "Error",
-        description: "Failed to connect to the server",
-        variant: "destructive"
-      })
-    } finally {
-      setClearing(false)
-      setClearDialogOpen(false)
-    }
+    // Admin functionality removed from main dashboard
+    // Table clearing should only be available in admin pages
+    toast({
+      title: "Admin Access Required",
+      description: "This function is only available in the admin panel",
+      variant: "destructive"
+    })
+    setClearDialogOpen(false)
   }
 
   const handleOpenClearDialog = async () => {

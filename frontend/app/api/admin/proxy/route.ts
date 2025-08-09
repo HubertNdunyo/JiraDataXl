@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8987'
+// Use BACKEND_URL for server-side requests (Docker internal network)
+// Falls back to NEXT_PUBLIC_API_URL for local development
+const BACKEND_URL = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8987'
 const ADMIN_API_KEY = process.env.ADMIN_API_KEY || ''
 
 // Proxy admin requests to backend with proper authentication

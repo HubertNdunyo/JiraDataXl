@@ -13,6 +13,7 @@ import { MappingWizard } from './mapping-wizard'
 import { toast } from '@/hooks/use-toast'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import DashboardLayout from '../../dashboard-layout'
+import { adminFetch } from '@/lib/admin-api'
 
 export default function FieldMappingsPage() {
   const [config, setConfig] = useState<any>(null)
@@ -36,11 +37,7 @@ export default function FieldMappingsPage() {
   const fetchConfig = async () => {
     setLoading(true)
     try {
-      const response = await fetch('/api/admin/config/field-mappings', {
-        headers: {
-          'X-Admin-Key': 'jira-admin-key-2024'
-        }
-      })
+      const response = await adminFetch('/api/admin/config/field-mappings')
       if (response.ok) {
         const data = await response.json()
         setConfig(data)
@@ -59,12 +56,8 @@ export default function FieldMappingsPage() {
   const saveConfig = async () => {
     setSaving(true)
     try {
-      const response = await fetch('/api/admin/config/field-mappings', {
+      const response = await adminFetch('/api/admin/config/field-mappings', {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Admin-Key': 'jira-admin-key-2024'
-        },
         body: JSON.stringify(config)
       })
 
@@ -93,12 +86,8 @@ export default function FieldMappingsPage() {
     setValidating(true)
     setValidationResults(null)
     try {
-      const response = await fetch('/api/admin/config/field-mappings/validate', {
+      const response = await adminFetch('/api/admin/config/field-mappings/validate', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Admin-Key': 'jira-admin-key-2024'
-        },
         body: JSON.stringify(config)
       })
 
@@ -162,12 +151,8 @@ export default function FieldMappingsPage() {
     // Automatically save the configuration
     setSaving(true)
     try {
-      const response = await fetch('/api/admin/config/field-mappings', {
+      const response = await adminFetch('/api/admin/config/field-mappings', {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Admin-Key': 'jira-admin-key-2024'
-        },
         body: JSON.stringify(wizardConfig)
       })
 
@@ -198,11 +183,8 @@ export default function FieldMappingsPage() {
   const discoverFields = async () => {
     setDiscovering(true)
     try {
-      const response = await fetch('/api/admin/fields/discover', {
-        method: 'POST',
-        headers: {
-          'X-Admin-Key': 'jira-admin-key-2024'
-        }
+      const response = await adminFetch('/api/admin/fields/discover', {
+        method: 'POST'
       })
       if (response.ok) {
         const data = await response.json()
@@ -234,10 +216,7 @@ export default function FieldMappingsPage() {
 
   const fetchCachedFields = async () => {
     try {
-      const response = await fetch('/api/admin/fields/cached', {
-        headers: {
-          'X-Admin-Key': 'jira-admin-key-2024'
-        }
+      const response = await adminFetch('/api/admin/fields/cached', {
       })
       if (response.ok) {
         const data = await response.json()
@@ -269,11 +248,8 @@ export default function FieldMappingsPage() {
   const syncDatabaseSchema = async () => {
     setSyncingSchema(true)
     try {
-      const response = await fetch('/api/admin/schema/sync', {
-        method: 'POST',
-        headers: {
-          'X-Admin-Key': 'jira-admin-key-2024'
-        }
+      const response = await adminFetch('/api/admin/schema/sync', {
+        method: 'POST'
       })
       
       if (response.ok) {

@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Badge } from '@/components/ui/badge'
 import { Eye, Loader2, AlertCircle } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { adminFetch } from '@/lib/admin-api'
 
 interface FieldPreviewProps {
   fieldId: string
@@ -40,13 +41,10 @@ export function FieldPreview({ fieldId, instance, fieldName, disabled }: FieldPr
     setError(null)
     
     try {
-      const response = await fetch(
+      const response = await adminFetch(
         `/api/admin/fields/preview?field_id=${encodeURIComponent(fieldId)}&instance=${instance}&limit=5`,
         {
-          method: 'POST',
-          headers: {
-            'X-Admin-Key': 'jira-admin-key-2024'
-          }
+          method: 'POST'
         }
       )
 

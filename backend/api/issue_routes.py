@@ -5,9 +5,9 @@ from fastapi import APIRouter, HTTPException, Query
 from typing import List, Optional
 import logging
 
-from ..models.schemas import JiraIssue, IssueSearchRequest
-from ..core.issue_manager import IssueManager
-from ..core.cache import cache_result
+from models.schemas import JiraIssue, IssueSearchRequest
+from core.issue_manager import IssueManager
+from core.cache import cache_result
 
 router = APIRouter()
 logger = logging.getLogger(__name__)

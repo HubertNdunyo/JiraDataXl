@@ -6,13 +6,16 @@ abstracting away the implementation details into separate modules.
 """
 
 from .db_core import (
-    DatabaseError,
+    DatabaseOperationError,
     get_db_connection,
     execute_query,
     execute_batch,
     check_table_exists,
     get_column_names
 )
+
+# Alias for backward compatibility
+DatabaseError = DatabaseOperationError
 
 from .db_projects import (
     ProjectMappingError,

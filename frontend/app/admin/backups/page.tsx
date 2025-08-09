@@ -13,6 +13,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Download, Upload, RefreshCw, Clock, Archive, AlertCircle, Plus } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import DashboardLayout from '../../dashboard-layout'
+import { adminFetch } from '@/lib/admin-api'
 
 interface Backup {
   id: number
@@ -35,11 +36,7 @@ export default function BackupsPage() {
   const fetchBackups = async () => {
     setLoading(true)
     try {
-      const response = await fetch('/api/admin/config/backups', {
-        headers: {
-          'X-Admin-Key': 'jira-admin-key-2024'
-        }
-      })
+      const response = await adminFetch('/api/admin/config/backups')
       if (response.ok) {
         const data = await response.json()
         setBackups(data.backups || [])
@@ -77,12 +74,8 @@ export default function BackupsPage() {
     }
 
     try {
-      const response = await fetch('/api/admin/config/backups', {
+      const response = await adminFetch('/api/admin/config/backups', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Admin-Key': 'jira-admin-key-2024'
-        },
         body: JSON.stringify({
           name: newBackup.name.trim(),
           description: newBackup.description.trim() || undefined
@@ -117,11 +110,8 @@ export default function BackupsPage() {
   const restoreBackup = async (backupId: number) => {
     setRestoring(backupId)
     try {
-      const response = await fetch(`/api/admin/config/restore/${backupId}`, {
-        method: 'POST',
-        headers: {
-          'X-Admin-Key': 'jira-admin-key-2024'
-        }
+      const response = await adminFetch(`/api/admin/config/restore/${backupId}`, {
+        method: 'POST'
       })
 
       if (response.ok) {

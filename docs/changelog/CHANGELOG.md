@@ -2,6 +2,32 @@
 
 All notable changes to the JIRA Sync Dashboard project will be documented in this file.
 
+## [2025-01-09] - Frontend Security Implementation
+
+### 🔒 Security Improvements - Frontend
+- **Removed ALL hardcoded API keys from frontend code**
+  - Eliminated all instances of `'jira-admin-key-2024'` and `'secure-admin-key-2024'`
+  - No sensitive credentials exposed in client-side JavaScript
+  
+- **Implemented Secure Proxy Pattern**
+  - All admin API calls now route through `/api/admin/proxy`
+  - API keys added server-side only
+  - Session validation happens on the server
+  
+- **Updated Components**
+  - Field mappings page: Now uses `adminFetch()` helper
+  - Backups page: Converted to secure authentication
+  - Field preview: Updated to use proxy pattern
+  - Main dashboard: Removed inappropriate admin functions
+  
+- **Fixed Docker Networking**
+  - Proxy route now correctly uses `BACKEND_URL` for internal Docker communication
+  - Resolves IPv6 connection issues
+
+### 📝 Documentation Updates
+- Updated README.md with comprehensive security architecture details
+- Added security improvement notes and setup instructions
+
 ## [2025-01-09] - Major Security Overhaul & Architecture Improvements
 
 ### 🚨 BREAKING CHANGES
