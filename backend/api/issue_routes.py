@@ -4,15 +4,10 @@ JIRA issue API routes
 from fastapi import APIRouter, HTTPException, Query
 from typing import List, Optional
 import logging
-import sys
-from pathlib import Path
 
-# Add parent directory to import existing logic
-sys.path.append(str(Path(__file__).parent.parent.parent.parent))
-
-from models.schemas import JiraIssue, IssueSearchRequest
-from core.issue_manager import IssueManager
-from core.cache import cache_result
+from ..models.schemas import JiraIssue, IssueSearchRequest
+from ..core.issue_manager import IssueManager
+from ..core.cache import cache_result
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -28,6 +23,7 @@ def get_issue_manager():
 
 
 @router.get("/{issue_key}", response_model=JiraIssue)
+@cache_result("issue", ttl=300)  # Cache for 5 minutes
 async def get_issue(issue_key: str):
     """Get details for a specific JIRA issue"""
     try:
@@ -80,6 +76,7 @@ async def get_project_issues(
 
 
 @router.get("/recent", response_model=List[JiraIssue])
+@cache_result("recent_issues", ttl=60)  # Cache for 1 minute since these change frequently
 async def get_recent_issues(
     limit: int = Query(default=10, ge=1, le=50)
 ):

@@ -4,13 +4,8 @@ Sync operation API routes
 from fastapi import APIRouter, HTTPException, BackgroundTasks
 from typing import Dict
 import logging
-import sys
-from pathlib import Path
 
-# Add parent directory to import existing sync logic
-sys.path.append(str(Path(__file__).parent.parent.parent.parent))
-
-from models.schemas import (
+from ..models.schemas import (
     SyncResponse,
     SyncStartRequest,
     SyncProgress,
@@ -19,8 +14,8 @@ from models.schemas import (
     SyncStatistics,
     SyncStatus
 )
-from core.sync_manager import SyncManager
-from core.db.db_sync_history import (
+from ..core.sync_manager import SyncManager
+from ..core.db.db_sync_history import (
     get_sync_history, 
     get_sync_run_details,
     get_project_sync_details,

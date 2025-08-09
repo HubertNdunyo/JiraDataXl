@@ -5,13 +5,9 @@ from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import os
-import sys
 from pathlib import Path
 from dotenv import load_dotenv
 import logging
-
-# Add parent directory to path to import existing modules
-sys.path.append(str(Path(__file__).parent.parent.parent))
 
 from api import sync_routes, issue_routes, config_routes, status_routes, admin_routes_v2, scheduler_routes
 from models.schemas import HealthCheck
