@@ -5,16 +5,12 @@ This helps identify the correct field IDs for various fields like location names
 """
 
 import os
-import sys
 import json
 import logging
 from typing import Dict, List, Any
 import requests
 from dotenv import load_dotenv
 from requests.auth import HTTPBasicAuth
-
-# Add the project root to the path so we can import from core
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 # Configure logging
 logging.basicConfig(

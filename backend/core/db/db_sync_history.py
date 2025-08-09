@@ -7,7 +7,7 @@ from datetime import datetime
 from typing import Optional, List, Dict, Any, Tuple
 from contextlib import contextmanager
 
-from .db_core import get_db_connection, DatabaseError
+from .db_core import get_db_connection, DatabaseOperationError
 
 logger = logging.getLogger(__name__)
 

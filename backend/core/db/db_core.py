@@ -59,12 +59,12 @@ def get_db_connection():
             retries += 1
             if retries == MAX_RETRIES:
                 logger.error(f"Failed to connect to database after {MAX_RETRIES} attempts: {e}")
-                raise DatabaseError(f"Database connection failed: {e}")
+                raise DatabaseOperationError(f"Database connection failed: {e}")
             logger.warning(f"Database connection attempt {retries} failed, retrying in {RETRY_DELAY} seconds")
             time.sleep(RETRY_DELAY)
         except Exception as e:
             logger.error(f"Unexpected database error: {e}")
-            raise DatabaseError(f"Database error: {e}")
+            raise DatabaseOperationError(f"Database error: {e}")
         finally:
             if conn:
                 conn.close()
@@ -82,7 +82,7 @@ def execute_query(query: str, params: Optional[tuple] = None, fetch: bool = Fals
         Query results if fetch=True, else None
         
     Raises:
-        DatabaseError: If query execution fails
+        DatabaseOperationError: If query execution fails
     """
     try:
         with get_db_connection() as conn:

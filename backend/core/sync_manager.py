@@ -20,8 +20,8 @@ from models.schemas import SyncProgress, SyncStatistics, SyncStatus
 logger = logging.getLogger(__name__)
 
 
-class SyncManager:
-    """Manages sync operations and state"""
+class SyncOrchestrator:
+    """Orchestrates sync operations and manages state for API layer"""
     
     def __init__(self):
         self.current_sync_id: Optional[str] = None

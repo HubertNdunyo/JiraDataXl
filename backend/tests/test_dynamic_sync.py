@@ -3,14 +3,10 @@
 Test script for the new dynamic field sync system.
 """
 
-import sys
 import logging
 from pathlib import Path
 
-# Add parent directory to path
-sys.path.append(str(Path(__file__).parent))
-
-from core.db.db_config import get_field_mapping_config, save_field_mapping_config
+from ..core.db.db_config import get_field_mapping_config, save_field_mapping_config
 
 # Setup logging
 logging.basicConfig(

@@ -4,16 +4,12 @@ Script to analyze specific JIRA issues to identify the correct location name fie
 """
 
 import os
-import sys
 import json
 import logging
 from typing import Dict, List, Any
 import requests
 from dotenv import load_dotenv
 from requests.auth import HTTPBasicAuth
-
-# Add the project root to the path so we can import from core
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 # Configure logging
 logging.basicConfig(

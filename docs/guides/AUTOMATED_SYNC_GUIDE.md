@@ -24,11 +24,11 @@ The JIRA Sync system now includes a built-in scheduler for automated synchroniza
 # Get scheduler status
 GET /api/scheduler/status
 
-# Update scheduler configuration
+# Update scheduler configuration (minimum 2 minutes)
 PUT /api/scheduler/config
 Body: {
   "enabled": true,
-  "interval_minutes": 30
+  "interval_minutes": 30  // Must be >= 2
 }
 
 # Enable scheduler
@@ -42,10 +42,14 @@ POST /api/scheduler/disable
 
 ## Configuration
 
+### Configuration Storage
+- **Location**: PostgreSQL database `configurations` table
+- **Access**: Via API endpoints or Admin Panel
+- **No File Required**: Configuration is stored in database, not in `sync_config.json`
+
 ### Default Settings
 - **Status**: Enabled
-- **Interval**: 2 minutes (currently configured)
-- **Location**: `/backend/config/sync_config.json`
+- **Interval**: 2 minutes minimum (configurable up to 24 hours)
 - **Thread Pool**: Uses separate thread to prevent blocking
 
 ### Recommended Settings
@@ -56,13 +60,14 @@ POST /api/scheduler/disable
 ## How It Works
 
 1. **Startup**: Scheduler initializes when the backend starts
-2. **Configuration Loading**: Reads settings from `sync_config.json`
+2. **Configuration Loading**: Reads settings from database `configurations` table
 3. **Job Scheduling**: Creates an interval-based job if enabled
 4. **Execution**: Runs sync at specified intervals
 5. **Safety Checks**: 
    - Skips if sync already running
    - Skips if last sync was < 1 minute ago
    - Records sync type as "scheduled" in history
+   - Enforces minimum 2-minute interval to prevent API rate limiting
 
 ## Monitoring
 
@@ -78,9 +83,10 @@ POST /api/scheduler/disable
 ## Troubleshooting
 
 ### Scheduler Not Running
-1. Check if enabled in config: `cat backend/config/sync_config.json`
+1. Check if enabled via API: `curl http://localhost:8987/api/scheduler/status`
 2. Check backend logs for scheduler initialization
 3. Verify APScheduler is installed: `pip list | grep apscheduler`
+4. Verify database configuration: Check `configurations` table for scheduler settings
 
 ### Syncs Not Triggering
 1. Check scheduler status via API or web interface

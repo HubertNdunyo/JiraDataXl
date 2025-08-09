@@ -1,0 +1,22 @@
+{
+  "instances": [
+    {
+      "id": "instance_1",
+      "name": "Primary JIRA",
+      "url": "https://your-company.atlassian.net",
+      "username": "your-email@company.com",
+      "api_token": "your-api-token-here",
+      "type": "source",
+      "enabled": true
+    },
+    {
+      "id": "instance_2",
+      "name": "Secondary JIRA",
+      "url": "https://other-instance.atlassian.net",
+      "username": "your-email@company.com",
+      "api_token": "your-api-token-here",
+      "type": "target",
+      "enabled": true
+    }
+  ]
+}

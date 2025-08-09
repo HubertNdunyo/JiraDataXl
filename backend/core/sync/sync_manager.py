@@ -113,9 +113,9 @@ Errors:
             for project, error in self.errors.items()
         )
 
-class SyncManager:
+class SyncWorker:
     """
-    Manages the synchronization process between JIRA and local database.
+    Worker that handles the synchronization process between JIRA and local database.
     """
     
     def __init__(

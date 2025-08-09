@@ -6,7 +6,7 @@ import logging
 from datetime import datetime
 from typing import List, Dict, Any, Optional, Tuple
 from psycopg2.extras import execute_batch
-from .db_core import get_db_connection, execute_query, DatabaseError
+from .db_core import get_db_connection, execute_query, DatabaseOperationError
 from .constants import ISSUE_COLUMNS
 
 # Configure logging

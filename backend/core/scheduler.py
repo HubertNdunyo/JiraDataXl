@@ -11,7 +11,7 @@ from apscheduler.triggers.cron import CronTrigger
 from concurrent.futures import ThreadPoolExecutor
 import threading
 
-from .sync_manager import SyncManager
+from .sync_manager import SyncOrchestrator
 from .db.db_sync_history import get_latest_sync_run
 from models.schemas import SyncStatus
 
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 class SyncScheduler:
     """Manages automated sync scheduling"""
     
-    def __init__(self, sync_manager: SyncManager):
+    def __init__(self, sync_manager: SyncOrchestrator):
         self.sync_manager = sync_manager
         self.scheduler = AsyncIOScheduler()
         self.job_id = "jira_sync_job"

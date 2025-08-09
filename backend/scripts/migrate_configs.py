@@ -2,12 +2,9 @@
 """
 Script to initialize configuration tables and migrate existing configs
 """
-import sys
-import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from core.db.db_config import create_config_tables, migrate_file_configs_to_db
 import logging
+
+from ..core.db.db_config import create_config_tables, migrate_file_configs_to_db
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

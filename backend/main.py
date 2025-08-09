@@ -46,7 +46,7 @@ async def lifespan(app: FastAPI):
     
     # Initialize sync manager and scheduler
     try:
-        sync_manager = SyncManager()
+        sync_manager = SyncOrchestrator()
         scheduler = SyncScheduler(sync_manager)
         
         # Start scheduler if enabled

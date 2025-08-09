@@ -6,7 +6,7 @@ abstracting away the implementation details into separate modules.
 """
 
 from .sync_manager import (
-    SyncManager,
+    SyncWorker,
     SyncStatistics,
     SyncError
 )
@@ -18,7 +18,7 @@ from .status_manager import (
 
 __all__ = [
     # Sync management
-    'SyncManager',
+    'SyncWorker',
     'SyncStatistics',
     'SyncError',
     
@@ -33,7 +33,7 @@ def create_sync_manager(
     project_timeout: int = 300,
     field_config_path: str = None,
     performance_config: dict = None
-) -> SyncManager:
+) -> SyncWorker:
     """
     Create a configured sync manager.
     
@@ -47,7 +47,7 @@ def create_sync_manager(
     Returns:
         Configured SyncManager instance
     """
-    return SyncManager(
+    return SyncWorker(
         jira_instances=jira_instances,
         max_workers=max_workers,
         project_timeout=project_timeout,

@@ -1,17 +1,12 @@
 import os
-import sys
 import logging
 from dotenv import load_dotenv
 from pprint import pprint
 
-# Add project root to path to allow imports from core
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-sys.path.insert(0, project_root)
-
-from core.config.logging_config import setup_logging
-from core.jira.jira_client import JiraClient, JiraClientError
-from core.jira.jira_issues import IssueFetcher
-from core.db.constants import ISSUE_COLUMNS
+from ...core.config.logging_config import setup_logging
+from ...core.jira.jira_client import JiraClient, JiraClientError
+from ...core.jira.jira_issues import IssueFetcher
+from ...core.db.constants import ISSUE_COLUMNS
 
 # --- Configuration ---
 ISSUE_KEY_TO_TEST = "SQHNVLY-14646"

@@ -6,7 +6,7 @@ import json
 import logging
 from typing import Dict, List, Optional
 from datetime import datetime
-from .db_core import execute_query, execute_batch, DatabaseError
+from .db_core import execute_query, execute_batch, DatabaseOperationError
 
 # Configure logging
 logger = logging.getLogger(__name__)
