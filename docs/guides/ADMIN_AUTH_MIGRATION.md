@@ -192,8 +192,8 @@ if (!isAuthenticated) {
 - Configurable in `/frontend/app/api/admin/auth/route.ts`
 
 ### Logout
-- Currently: Clear cookies manually or wait for expiration
-- Future: Logout button will be added to admin panel
+- Tokens are rotated on each login and stored server-side
+- Logout endpoint revokes the current session token immediately
 
 ### Multiple Users
 - Current: Single admin key shared

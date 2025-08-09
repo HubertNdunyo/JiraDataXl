@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
+import { validateSession } from '@/lib/session'
 
 // Use BACKEND_URL for server-side requests (Docker internal network)
 // Falls back to NEXT_PUBLIC_API_URL for local development
@@ -14,9 +15,9 @@ export async function handleAdminRequest(
   try {
     // Check if user has a valid session
     const cookieStore = cookies()
-    const sessionToken = cookieStore.get('admin-session')
+    const sessionToken = cookieStore.get('admin-session')?.value
 
-    if (!sessionToken) {
+    if (!sessionToken || !validateSession(sessionToken)) {
       return NextResponse.json(
         { error: 'Unauthorized - Please login' },
         { status: 401 }
