@@ -65,8 +65,8 @@ class Application:
         """Verify all required environment variables are set."""
         required_vars = [
             'DB_NAME', 'DB_USER', 'DB_PASSWORD', 'DB_HOST', 'DB_PORT',
-            'JIRA_USERNAME_1', 'JIRA_PASSWORD_1',
-            'JIRA_USERNAME_2', 'JIRA_PASSWORD_2'
+            'JIRA_URL_1', 'JIRA_USERNAME_1', 'JIRA_PASSWORD_1',
+            'JIRA_URL_2', 'JIRA_USERNAME_2', 'JIRA_PASSWORD_2'
         ]
         
         missing = [var for var in required_vars if not os.getenv(var)]
@@ -81,16 +81,16 @@ class Application:
         # Initialize database
         initialize_database()
         
-        # Configure JIRA instances
+        # Configure JIRA instances from environment variables
         self.jira_instances = [
             {
-                "url": "https://betteredits.atlassian.net",
+                "url": os.getenv('JIRA_URL_1'),
                 "username": os.getenv('JIRA_USERNAME_1'),
                 "password": os.getenv('JIRA_PASSWORD_1'),
                 "instance_type": "instance_1"
             },
             {
-                "url": "https://betteredits2.atlassian.net",
+                "url": os.getenv('JIRA_URL_2'),
                 "username": os.getenv('JIRA_USERNAME_2'),
                 "password": os.getenv('JIRA_PASSWORD_2'),
                 "instance_type": "instance_2"
