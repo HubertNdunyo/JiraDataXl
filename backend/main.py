@@ -5,7 +5,6 @@ from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import os
-from pathlib import Path
 from dotenv import load_dotenv
 import logging
 
@@ -55,9 +54,8 @@ async def lifespan(app: FastAPI):
         
         # Load JIRA instances configuration
         try:
-            from core.app import Application
-            temp_app = Application()
-            jira_instances = temp_app.jira_instances
+            from core.config.jira_instances import load_jira_instances
+            jira_instances = load_jira_instances()
         except Exception as e:
             logger.warning(f"Could not load JIRA instances configuration: {e}")
             jira_instances = None

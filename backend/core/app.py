@@ -3,12 +3,10 @@ Main application class that coordinates all components.
 """
 
 import os
-import json
 import logging
 from typing import Dict, List, Optional
 from datetime import datetime
 from dotenv import load_dotenv
-from pathlib import Path
 
 from .db import initialize_database
 from .jira import create_jira_client
@@ -18,6 +16,7 @@ from .sync import (
     SyncStatistics
 )
 from .config.performance_config import get_performance_config
+from .config.jira_instances import load_jira_instances, has_legacy_jira_config
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -77,18 +76,11 @@ class Application:
             )
         
         # Check for JIRA instances configuration
-        if not os.getenv('JIRA_INSTANCES') and not self._has_legacy_jira_config():
+        if not os.getenv('JIRA_INSTANCES') and not has_legacy_jira_config():
             raise EnvironmentError(
                 "JIRA instances not configured. Either set JIRA_INSTANCES environment variable "
                 "or provide legacy JIRA_URL_1/2, JIRA_USERNAME_1/2, JIRA_PASSWORD_1/2 variables."
             )
-    
-    def _has_legacy_jira_config(self) -> bool:
-        """Check if legacy JIRA configuration exists."""
-        return all([
-            os.getenv('JIRA_URL_1'), os.getenv('JIRA_USERNAME_1'), os.getenv('JIRA_PASSWORD_1'),
-            os.getenv('JIRA_URL_2'), os.getenv('JIRA_USERNAME_2'), os.getenv('JIRA_PASSWORD_2')
-        ])
 
     def _initialize_components(self):
         """Initialize all application components."""
@@ -96,7 +88,7 @@ class Application:
         initialize_database()
         
         # Configure JIRA instances
-        self.jira_instances = self._load_jira_instances()
+        self.jira_instances = load_jira_instances()
         
         # Create managers
         self.sync_manager = create_sync_manager(
@@ -170,80 +162,6 @@ class Application:
         """Check if sync process has been stopped."""
         return self.sync_manager.is_stopped()
 
-    def _load_jira_instances(self) -> List[Dict]:
-        """Load JIRA instances configuration from environment or config file."""
-        # First, try to load from JIRA_INSTANCES environment variable
-        jira_instances_env = os.getenv('JIRA_INSTANCES')
-        if jira_instances_env:
-            try:
-                # JIRA_INSTANCES should be a JSON array of instance objects
-                instances_data = json.loads(jira_instances_env)
-                if isinstance(instances_data, list):
-                    instances = []
-                    for idx, inst in enumerate(instances_data):
-                        instances.append({
-                            "url": inst.get('url'),
-                            "username": inst.get('username'),
-                            "password": inst.get('api_token') or inst.get('password'),
-                            "instance_type": inst.get('type', f'instance_{idx+1}'),
-                            "name": inst.get('name', f'Instance {idx+1}'),
-                            "enabled": inst.get('enabled', True)
-                        })
-                    logger.info(f"Loaded {len(instances)} JIRA instances from JIRA_INSTANCES environment variable")
-                    return instances
-            except json.JSONDecodeError as e:
-                logger.error(f"Failed to parse JIRA_INSTANCES JSON: {e}")
-        
-        # Second, try to load from config file if specified
-        config_file_path = os.getenv('JIRA_CONFIG_FILE')
-        if config_file_path:
-            config_path = Path(config_file_path)
-            if config_path.exists():
-                try:
-                    with open(config_path, 'r') as f:
-                        config_data = json.load(f)
-                        instances = []
-                        for inst in config_data.get('instances', []):
-                            if inst.get('enabled', True):
-                                instances.append({
-                                    "url": inst.get('url'),
-                                    "username": inst.get('username'),
-                                    "password": inst.get('api_token') or inst.get('password'),
-                                    "instance_type": inst.get('id') or inst.get('type'),
-                                    "name": inst.get('name', 'JIRA Instance'),
-                                    "enabled": True
-                                })
-                        logger.info(f"Loaded {len(instances)} JIRA instances from config file: {config_file_path}")
-                        return instances
-                except Exception as e:
-                    logger.error(f"Failed to load JIRA config file {config_file_path}: {e}")
-        
-        # Finally, fall back to legacy environment variables for backward compatibility
-        if self._has_legacy_jira_config():
-            logger.info("Using legacy JIRA configuration from environment variables")
-            return [
-                {
-                    "url": os.getenv('JIRA_URL_1'),
-                    "username": os.getenv('JIRA_USERNAME_1'),
-                    "password": os.getenv('JIRA_PASSWORD_1'),
-                    "instance_type": "instance_1",
-                    "name": "Instance 1",
-                    "enabled": True
-                },
-                {
-                    "url": os.getenv('JIRA_URL_2'),
-                    "username": os.getenv('JIRA_USERNAME_2'),
-                    "password": os.getenv('JIRA_PASSWORD_2'),
-                    "instance_type": "instance_2",
-                    "name": "Instance 2",
-                    "enabled": True
-                }
-            ]
-        
-        raise EnvironmentError(
-            "No JIRA instances configured. Please set JIRA_INSTANCES environment variable, "
-            "JIRA_CONFIG_FILE to point to a config file, or use legacy JIRA_URL_1/2 variables."
-        )
     
     def get_jira_client(
         self,
