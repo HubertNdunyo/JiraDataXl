@@ -5,7 +5,7 @@ This module provides a clean interface to the synchronization functionality,
 abstracting away the implementation details into separate modules.
 """
 
-from .sync_manager import (
+from .sync_worker import (
     SyncWorker,
     SyncStatistics,
     SyncError
@@ -45,7 +45,7 @@ def create_sync_manager(
         performance_config: Full performance configuration dict
         
     Returns:
-        Configured SyncManager instance
+        Configured SyncWorker instance
     """
     return SyncWorker(
         jira_instances=jira_instances,

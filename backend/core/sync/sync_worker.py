@@ -1,5 +1,5 @@
 """
-Sync process management and coordination.
+Sync worker that handles the actual synchronization between JIRA instances.
 """
 
 import logging

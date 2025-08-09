@@ -1,5 +1,5 @@
 """
-Sync manager that interfaces with the existing sync logic
+Sync orchestrator that manages sync operations and state for the API layer.
 """
 import uuid
 import logging

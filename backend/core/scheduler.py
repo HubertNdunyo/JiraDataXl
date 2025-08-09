@@ -11,7 +11,7 @@ from apscheduler.triggers.cron import CronTrigger
 from concurrent.futures import ThreadPoolExecutor
 import threading
 
-from .sync_manager import SyncOrchestrator
+from .sync_orchestrator import SyncOrchestrator
 from .db.db_sync_history import get_latest_sync_run
 from models.schemas import SyncStatus
 

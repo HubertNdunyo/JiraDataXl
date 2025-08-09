@@ -12,7 +12,7 @@ import logging
 from api import sync_routes, issue_routes, config_routes, status_routes, admin_routes_v2, scheduler_routes
 from models.schemas import HealthCheck
 from core.database import init_db
-from core.sync_manager import SyncManager
+from core.sync_orchestrator import SyncOrchestrator
 from core.scheduler import SyncScheduler
 
 # Load environment variables
