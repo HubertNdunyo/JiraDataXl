@@ -11,7 +11,7 @@ import logging
 
 from api import sync_routes, issue_routes, config_routes, status_routes, admin_routes_v2, scheduler_routes
 from models.schemas import HealthCheck
-from core.database import init_db
+from core.database import init_db, check_db_connection
 from core.sync_orchestrator import SyncOrchestrator
 from core.scheduler import SyncScheduler
 
@@ -121,16 +121,26 @@ async def root():
 @app.get("/health", response_model=HealthCheck)
 async def health_check():
     """Detailed health check"""
-    # Check database connection
     try:
-        # TODO: Add actual database health check
+        if not check_db_connection():
+            diagnostics = {
+                "status": "unhealthy",
+                "message": "Database connection failed",
+            }
+            raise HTTPException(status_code=503, detail=diagnostics)
         return HealthCheck(
             status="healthy",
-            message="All systems operational"
+            message="All systems operational",
         )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Health check failed: {e}")
-        raise HTTPException(status_code=503, detail="Service unavailable")
+        diagnostics = {
+            "status": "unhealthy",
+            "message": str(e),
+        }
+        raise HTTPException(status_code=503, detail=diagnostics)
 
 
 if __name__ == "__main__":
