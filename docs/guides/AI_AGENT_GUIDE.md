@@ -206,8 +206,9 @@ cd /home/hubert/jiraData/frontend
 
 ### Testing Admin API
 ```bash
-cd /home/hubert/jiraData
-./test_admin_api.sh
+# Test admin endpoints directly with curl
+curl -X GET http://localhost:8987/api/admin/test \
+  -H "X-Admin-Key: jira-admin-key-2024"
 ```
 
 ## Field Mapping Management

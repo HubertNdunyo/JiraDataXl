@@ -58,6 +58,10 @@ export function FieldSearchInput({
 
     const search = searchTerm.toLowerCase()
     const filtered = allFields.filter((field: any) => {
+      // Skip already mapped fields (but allow current value)
+      if (field.field_id !== value && existingMappings.includes(field.field_id)) {
+        return false
+      }
       const nameMatch = field.field_name.toLowerCase().includes(search)
       const idMatch = field.field_id.toLowerCase().includes(search)
       return nameMatch || idMatch
@@ -65,7 +69,7 @@ export function FieldSearchInput({
 
     setFilteredFields(filtered)
     setSelectedIndex(0)
-  }, [searchTerm, allFields])
+  }, [searchTerm, allFields, existingMappings, value])
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

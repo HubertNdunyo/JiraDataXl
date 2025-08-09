@@ -80,10 +80,10 @@ export function MappingWizard({ open, onClose, onComplete, cachedFields, existin
   // Get available unmapped fields from both instances
   const getAvailableFields = () => {
     const mappedIds = getMappedFieldIds()
-    const availableFields: any[] = []
+    const fieldsByName = new Map<string, any>()
     
     if (cachedFields?.fields) {
-      // Get fields from both instances
+      // Process fields from both instances and group by name
       ['instance_1', 'instance_2'].forEach(instance => {
         const instanceFields = cachedFields.fields[instance]
         if (instanceFields) {
@@ -94,22 +94,52 @@ export function MappingWizard({ open, onClose, onComplete, cachedFields, existin
             // Skip if already mapped
             if (mappedIds.has(field.field_id)) return
             
-            // Skip if already added from other instance
-            if (availableFields.some(f => f.field_id === field.field_id)) return
+            const fieldName = field.field_name
             
-            // Add field with instance info
-            availableFields.push({
-              ...field,
-              instances: [instance],
-              score: calculateFieldScore(field.field_name)
-            })
+            if (fieldsByName.has(fieldName)) {
+              // Field with same name exists, add this instance's info
+              const existingField = fieldsByName.get(fieldName)
+              
+              // Add instance to the list
+              if (!existingField.instances.includes(instance)) {
+                existingField.instances.push(instance)
+              }
+              
+              // Store field IDs for each instance
+              if (!existingField.field_ids) {
+                existingField.field_ids = {}
+              }
+              existingField.field_ids[instance] = field.field_id
+              
+              // Use the first field's type and other properties
+              // They should be the same across instances for the same field
+            } else {
+              // New field, create entry
+              fieldsByName.set(fieldName, {
+                field_name: field.field_name,
+                field_type: field.field_type,
+                is_custom: field.is_custom,
+                is_array: field.is_array,
+                instances: [instance],
+                field_ids: { [instance]: field.field_id },
+                uniqueId: `field_${fieldName.replace(/[^a-zA-Z0-9]/g, '_')}`,
+                score: calculateFieldScore(field.field_name),
+                isMapped: false
+              })
+            }
           })
         }
       })
     }
     
-    // Sort by relevance score (higher score = more relevant)
-    return availableFields.sort((a, b) => b.score - a.score)
+    // Convert map to array and sort
+    const availableFields = Array.from(fieldsByName.values())
+    return availableFields.sort((a, b) => {
+      // First sort by score (relevance)
+      if (b.score !== a.score) return b.score - a.score
+      // Then by field name
+      return a.field_name.localeCompare(b.field_name)
+    })
   }
 
   // Calculate relevance score based on common field keywords
@@ -192,8 +222,8 @@ export function MappingWizard({ open, onClose, onComplete, cachedFields, existin
     const availableFields = getAvailableFields()
     const mappings: Record<string, FieldMapping> = {}
     
-    selectedFields.forEach((fieldId, index) => {
-      const field = availableFields.find(f => f.field_id === fieldId)
+    selectedFields.forEach((uniqueId) => {
+      const field = availableFields.find(f => f.uniqueId === uniqueId)
       if (field) {
         // Generate a unique key for each mapping
         const baseKey = field.field_name
@@ -216,15 +246,27 @@ export function MappingWizard({ open, onClose, onComplete, cachedFields, existin
           required: false,
         }
         
-        // Don't pre-populate instance mappings - let user choose different fields for each instance
-        // This is just the initial suggestion based on the selected field
+        // Pre-populate instances where this field exists
+        if (field.field_ids.instance_1) {
+          mappings[fieldKey].instance1 = {
+            field_id: field.field_ids.instance_1,
+            name: field.field_name
+          }
+        }
+        if (field.field_ids.instance_2) {
+          mappings[fieldKey].instance2 = {
+            field_id: field.field_ids.instance_2,
+            name: field.field_name
+          }
+        }
       }
     })
     
     setFieldMappings(mappings)
     
     if (mode === 'smart') {
-      // Smart mode will try to find matching fields in both instances
+      // In smart mode, try to find matching fields in the other instance
+      // for fields that only exist in one instance
       performSmartMapping(mappings)
     }
   }
@@ -232,70 +274,74 @@ export function MappingWizard({ open, onClose, onComplete, cachedFields, existin
   const performSmartMapping = async (mappings: Record<string, FieldMapping>) => {
     setIsProcessing(true)
     
-    // Smart mapping tries to find best matching fields in both instances
+    // Smart mapping tries to find best matching fields in missing instances
     const updatedMappings = { ...mappings }
     
     for (const [fieldKey, mapping] of Object.entries(updatedMappings)) {
       if (cachedFields?.fields) {
         const searchTerms = mapping.fieldName.toLowerCase().split(/[^a-z0-9]+/).filter(t => t.length > 2)
         
-        // Search for best match in instance 1
-        const instance1Fields = [...(cachedFields.fields.instance_1?.system || []), ...(cachedFields.fields.instance_1?.custom || [])]
-        const instance1Matches = instance1Fields
-          .map((field: any) => {
-            const fieldNameLower = field.field_name.toLowerCase()
-            let score = 0
-            
-            // Exact match gets highest score
-            if (fieldNameLower === mapping.fieldName.toLowerCase()) {
-              score = 100
-            } else {
-              // Score based on matching terms
-              searchTerms.forEach(term => {
-                if (fieldNameLower.includes(term)) score += 10
-              })
+        // Only search for instance 1 if it's missing
+        if (!mapping.instance1) {
+          const instance1Fields = [...(cachedFields.fields.instance_1?.system || []), ...(cachedFields.fields.instance_1?.custom || [])]
+          const instance1Matches = instance1Fields
+            .map((field: any) => {
+              const fieldNameLower = field.field_name.toLowerCase()
+              let score = 0
+              
+              // Exact match gets highest score
+              if (fieldNameLower === mapping.fieldName.toLowerCase()) {
+                score = 100
+              } else {
+                // Score based on matching terms
+                searchTerms.forEach(term => {
+                  if (fieldNameLower.includes(term)) score += 10
+                })
+              }
+              
+              return { field, score }
+            })
+            .filter(item => item.score > 0)
+            .sort((a, b) => b.score - a.score)
+          
+          if (instance1Matches.length > 0) {
+            const bestMatch = instance1Matches[0].field
+            updatedMappings[fieldKey].instance1 = {
+              field_id: bestMatch.field_id,
+              name: bestMatch.field_name
             }
-            
-            return { field, score }
-          })
-          .filter(item => item.score > 0)
-          .sort((a, b) => b.score - a.score)
-        
-        if (instance1Matches.length > 0) {
-          const bestMatch = instance1Matches[0].field
-          updatedMappings[fieldKey].instance1 = {
-            field_id: bestMatch.field_id,
-            name: bestMatch.field_name
           }
         }
         
-        // Search for best match in instance 2
-        const instance2Fields = [...(cachedFields.fields.instance_2?.system || []), ...(cachedFields.fields.instance_2?.custom || [])]
-        const instance2Matches = instance2Fields
-          .map((field: any) => {
-            const fieldNameLower = field.field_name.toLowerCase()
-            let score = 0
-            
-            // Exact match gets highest score
-            if (fieldNameLower === mapping.fieldName.toLowerCase()) {
-              score = 100
-            } else {
-              // Score based on matching terms
-              searchTerms.forEach(term => {
-                if (fieldNameLower.includes(term)) score += 10
-              })
+        // Only search for instance 2 if it's missing
+        if (!mapping.instance2) {
+          const instance2Fields = [...(cachedFields.fields.instance_2?.system || []), ...(cachedFields.fields.instance_2?.custom || [])]
+          const instance2Matches = instance2Fields
+            .map((field: any) => {
+              const fieldNameLower = field.field_name.toLowerCase()
+              let score = 0
+              
+              // Exact match gets highest score
+              if (fieldNameLower === mapping.fieldName.toLowerCase()) {
+                score = 100
+              } else {
+                // Score based on matching terms
+                searchTerms.forEach(term => {
+                  if (fieldNameLower.includes(term)) score += 10
+                })
+              }
+              
+              return { field, score }
+            })
+            .filter(item => item.score > 0)
+            .sort((a, b) => b.score - a.score)
+          
+          if (instance2Matches.length > 0) {
+            const bestMatch = instance2Matches[0].field
+            updatedMappings[fieldKey].instance2 = {
+              field_id: bestMatch.field_id,
+              name: bestMatch.field_name
             }
-            
-            return { field, score }
-          })
-          .filter(item => item.score > 0)
-          .sort((a, b) => b.score - a.score)
-        
-        if (instance2Matches.length > 0) {
-          const bestMatch = instance2Matches[0].field
-          updatedMappings[fieldKey].instance2 = {
-            field_id: bestMatch.field_id,
-            name: bestMatch.field_name
           }
         }
       }
@@ -324,54 +370,93 @@ export function MappingWizard({ open, onClose, onComplete, cachedFields, existin
       field_groups: {}
     }
     
-    // Create field groups from wizard selections
-    const wizardGroups = {
-      "Wizard Fields": {
-        description: "Fields added via configuration wizard",
-        fields: {}
-      }
+    // Get existing Wizard Fields group or create new one
+    const existingWizardGroup = baseConfig.field_groups["Wizard Fields"] || {
+      description: "Fields added via configuration wizard",
+      fields: {}
     }
-
-    // Convert wizard mappings to proper format
+    
+    // Merge new mappings with existing ones
+    const mergedFields = { ...existingWizardGroup.fields }
+    
+    // Convert wizard mappings to proper format and add to merged fields
     Object.entries(fieldMappings).forEach(([key, mapping]) => {
-      // Ensure both instance mappings have the required structure
-      const instance1Mapping = mapping.instance1 ? {
-        field_id: mapping.instance1.field_id,
-        name: mapping.instance1.name,
-        description: null
-      } : null
+      // Check if this field already exists (by field name or key)
+      const existingKey = Object.keys(mergedFields).find(k => 
+        mergedFields[k].description === mapping.fieldName || k === key
+      )
       
-      const instance2Mapping = mapping.instance2 ? {
-        field_id: mapping.instance2.field_id,
-        name: mapping.instance2.name,
-        description: null
-      } : null
+      if (existingKey) {
+        // Update existing field mapping
+        const instance1Mapping = mapping.instance1 ? {
+          field_id: mapping.instance1.field_id,
+          name: mapping.instance1.name,
+          description: null
+        } : mergedFields[existingKey].instance_1
+        
+        const instance2Mapping = mapping.instance2 ? {
+          field_id: mapping.instance2.field_id,
+          name: mapping.instance2.name,
+          description: null
+        } : mergedFields[existingKey].instance_2
+        
+        mergedFields[existingKey] = {
+          ...mergedFields[existingKey],
+          type: mapping.type,
+          required: mapping.required,
+          description: mapping.fieldName,
+          instance_1: instance1Mapping,
+          instance_2: instance2Mapping
+        }
+      } else {
+        // Add new field mapping
+        const instance1Mapping = mapping.instance1 ? {
+          field_id: mapping.instance1.field_id,
+          name: mapping.instance1.name,
+          description: null
+        } : null
+        
+        const instance2Mapping = mapping.instance2 ? {
+          field_id: mapping.instance2.field_id,
+          name: mapping.instance2.name,
+          description: null
+        } : null
 
-      wizardGroups["Wizard Fields"].fields[key] = {
-        type: mapping.type,
-        required: mapping.required,
-        description: mapping.fieldName,
-        system_field: false,
-        field_id: null,
-        instance_1: instance1Mapping,
-        instance_2: instance2Mapping
+        mergedFields[key] = {
+          type: mapping.type,
+          required: mapping.required,
+          description: mapping.fieldName,
+          system_field: false,
+          field_id: null,
+          instance_1: instance1Mapping,
+          instance_2: instance2Mapping
+        }
       }
     })
 
-    // Only add the group if it has fields
-    if (Object.keys(wizardGroups["Wizard Fields"].fields).length > 0) {
-      // Return the complete configuration structure
-      onComplete({
-        ...baseConfig,
-        field_groups: {
-          ...baseConfig.field_groups,
-          ...wizardGroups
+    // Create the updated configuration
+    const updatedConfig = {
+      ...baseConfig,
+      last_updated: new Date().toISOString(),
+      field_groups: {
+        ...baseConfig.field_groups,
+        "Wizard Fields": {
+          description: "Fields added via configuration wizard",
+          fields: mergedFields
         }
-      })
+      }
+    }
+    
+    // Count how many fields were added/updated
+    const newFieldCount = Object.keys(fieldMappings).length
+    const totalFieldCount = Object.keys(mergedFields).length
+    
+    if (newFieldCount > 0) {
+      onComplete(updatedConfig)
       
       toast({
         title: "Wizard Complete",
-        description: `Successfully configured ${Object.keys(fieldMappings).length} field mappings`
+        description: `Successfully added/updated ${newFieldCount} field mappings. Total: ${totalFieldCount} fields`
       })
     } else {
       toast({
@@ -550,55 +635,69 @@ export function MappingWizard({ open, onClose, onComplete, cachedFields, existin
               </Alert>
             ) : (
               <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
-                {filteredFields.map((field) => (
-                  <Card 
-                    key={field.field_id} 
-                    className={selectedFields.includes(field.field_id) ? 'border-blue-500' : ''}
-                  >
-                    <CardContent className="p-3">
-                      <div className="flex items-center gap-3">
-                        <Checkbox
-                          checked={selectedFields.includes(field.field_id)}
-                          onCheckedChange={() => toggleFieldSelection(field.field_id)}
-                          id={field.field_id}
-                        />
-                        <div className="flex-1">
-                          <Label htmlFor={field.field_id} className="cursor-pointer">
-                            <div className="font-medium">{field.field_name}</div>
-                            <div className="text-xs text-gray-500">
-                              ID: {field.field_id} • Available in: {field.instances.join(', ').replace(/_/g, ' ')}
-                            </div>
-                          </Label>
+                {filteredFields.map((field) => {
+                  const isMapped = field.isMapped
+                  const isSelected = selectedFields.includes(field.uniqueId)
+                  return (
+                    <Card 
+                      key={field.uniqueId} 
+                      className={`${isSelected ? 'border-blue-500' : ''} ${isMapped ? 'opacity-50' : ''}`}
+                    >
+                      <CardContent className="p-3">
+                        <div className="flex items-center gap-3">
+                          <Checkbox
+                            checked={isSelected}
+                            onCheckedChange={() => !isMapped && toggleFieldSelection(field.uniqueId)}
+                            id={field.uniqueId}
+                            disabled={isMapped}
+                          />
+                          <div className="flex-1">
+                            <Label htmlFor={field.uniqueId} className={`${isMapped ? '' : 'cursor-pointer'}`}>
+                              <div className={`font-medium ${isMapped ? 'text-gray-400' : ''}`}>
+                                {field.field_name}
+                                {isMapped && <span className="ml-2 text-xs text-gray-400">(Already Mapped)</span>}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {field.instances.map((inst: string) => (
+                                  <div key={inst}>
+                                    {inst.replace(/_/g, ' ')}: {field.field_ids[inst]}
+                                  </div>
+                                ))}
+                              </div>
+                            </Label>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge 
+                              variant="outline" 
+                              className={getFieldTypeColor(field.field_type)}
+                            >
+                              {field.field_type}
+                            </Badge>
+                            {field.is_array && (
+                              <Badge variant="secondary" className="text-xs">
+                                Array
+                              </Badge>
+                            )}
+                            {field.is_custom ? (
+                              <Badge variant="outline" className="text-xs">
+                                Custom
+                              </Badge>
+                            ) : (
+                              <Badge variant="default" className="text-xs">
+                                System
+                              </Badge>
+                            )}
+                            {field.score > 0 && !isMapped && (
+                              <span title={`Relevance score: ${field.score}`}>
+                                <Sparkles className="w-4 h-4 text-amber-500" />
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Badge 
-                            variant="outline" 
-                            className={getFieldTypeColor(field.field_type)}
-                          >
-                            {field.field_type}
-                          </Badge>
-                          {field.is_array && (
-                            <Badge variant="secondary" className="text-xs">
-                              Array
-                            </Badge>
-                          )}
-                          {field.is_custom ? (
-                            <Badge variant="outline" className="text-xs">
-                              Custom
-                            </Badge>
-                          ) : (
-                            <Badge variant="default" className="text-xs">
-                              System
-                            </Badge>
-                          )}
-                          {field.score > 0 && (
-                            <Sparkles className="w-4 h-4 text-amber-500" title={`Relevance score: ${field.score}`} />
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      </CardContent>
+                    </Card>
+                  )
+                })}
               </div>
             )}
 
@@ -694,7 +793,7 @@ export function MappingWizard({ open, onClose, onComplete, cachedFields, existin
                               }}
                               instance="instance_1"
                               cachedFields={cachedFields}
-                              existingMappings={[]}
+                              existingMappings={Array.from(getMappedFieldIds())}
                             />
                           </div>
 
@@ -729,7 +828,7 @@ export function MappingWizard({ open, onClose, onComplete, cachedFields, existin
                               }}
                               instance="instance_2"
                               cachedFields={cachedFields}
-                              existingMappings={[]}
+                              existingMappings={Array.from(getMappedFieldIds())}
                             />
                           </div>
                         </div>

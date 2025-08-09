@@ -1,0 +1,525 @@
+{
+  "version": "2.0",
+  "description": "Core business fields for JIRA synchronization",
+  "last_updated": "2025-01-09",
+  "instances": {
+    "instance_1": {
+      "url": "https://betteredits.atlassian.net",
+      "name": "BetterEdits Instance 1"
+    },
+    "instance_2": {
+      "url": "https://betteredits2.atlassian.net",
+      "name": "BetterEdits Instance 2"
+    }
+  },
+  "field_groups": {
+    "Core Fields": {
+      "description": "Essential business fields for issue tracking",
+      "fields": {
+        "issue_key": {
+          "type": "string",
+          "required": true,
+          "description": "JIRA Issue Key",
+          "system_field": true,
+          "field_id": "issuekey",
+          "instance_1": {
+            "field_id": "issuekey",
+            "name": "Issue Key"
+          },
+          "instance_2": {
+            "field_id": "issuekey",
+            "name": "Issue Key"
+          }
+        },
+        "summary": {
+          "type": "string",
+          "required": true,
+          "description": "Issue Summary",
+          "system_field": true,
+          "field_id": "summary",
+          "instance_1": {
+            "field_id": "summary",
+            "name": "Summary"
+          },
+          "instance_2": {
+            "field_id": "summary",
+            "name": "Summary"
+          }
+        },
+        "status": {
+          "type": "string",
+          "required": true,
+          "description": "Issue Status",
+          "system_field": true,
+          "field_id": "status",
+          "instance_1": {
+            "field_id": "status",
+            "name": "Status"
+          },
+          "instance_2": {
+            "field_id": "status",
+            "name": "Status"
+          }
+        },
+        "project_name": {
+          "type": "string",
+          "required": true,
+          "description": "Project Name",
+          "system_field": true,
+          "field_id": "project",
+          "instance_1": {
+            "field_id": "project",
+            "name": "Project"
+          },
+          "instance_2": {
+            "field_id": "project",
+            "name": "Project"
+          }
+        },
+        "last_updated": {
+          "type": "datetime",
+          "required": false,
+          "description": "Last Updated Timestamp",
+          "system_field": true,
+          "field_id": "updated",
+          "instance_1": {
+            "field_id": "updated",
+            "name": "Updated"
+          },
+          "instance_2": {
+            "field_id": "updated",
+            "name": "Updated"
+          }
+        }
+      }
+    },
+    "Order Information": {
+      "description": "Order and client details",
+      "fields": {
+        "ndpu_order_number": {
+          "type": "string",
+          "required": false,
+          "description": "NDPU Order Number",
+          "system_field": false,
+          "field_id": null,
+          "instance_1": {
+            "field_id": "customfield_10501",
+            "name": "NDPU Order Number"
+          },
+          "instance_2": {
+            "field_id": null,
+            "name": "NDPU Order Number",
+            "description": "Field may need to be mapped in instance 2"
+          }
+        },
+        "ndpu_client_name": {
+          "type": "string",
+          "required": false,
+          "description": "NDPU Client Name",
+          "system_field": false,
+          "field_id": null,
+          "instance_1": {
+            "field_id": "customfield_10600",
+            "name": "NDPU Client Name"
+          },
+          "instance_2": {
+            "field_id": null,
+            "name": "NDPU Client Name",
+            "description": "Field may need to be mapped in instance 2"
+          }
+        },
+        "ndpu_client_email": {
+          "type": "string",
+          "required": false,
+          "description": "NDPU Client Email",
+          "system_field": false,
+          "field_id": null,
+          "instance_1": {
+            "field_id": "customfield_10601",
+            "name": "NDPU Client email"
+          },
+          "instance_2": {
+            "field_id": null,
+            "name": "NDPU Client Email",
+            "description": "Field may need to be mapped in instance 2"
+          }
+        },
+        "ndpu_listing_address": {
+          "type": "string",
+          "required": false,
+          "description": "NDPU Listing Address",
+          "system_field": false,
+          "field_id": null,
+          "instance_1": {
+            "field_id": "customfield_10603",
+            "name": "NDPU Listing Address"
+          },
+          "instance_2": {
+            "field_id": null,
+            "name": "NDPU Listing Address",
+            "description": "Field may need to be mapped in instance 2"
+          }
+        }
+      }
+    },
+    "Media and Delivery": {
+      "description": "Media files and delivery information",
+      "fields": {
+        "ndpu_raw_photos": {
+          "type": "number",
+          "required": false,
+          "description": "Number of Raw Photos",
+          "system_field": false,
+          "field_id": null,
+          "instance_1": {
+            "field_id": "customfield_12581",
+            "name": "NDPU Number of Raw Photos"
+          },
+          "instance_2": {
+            "field_id": null,
+            "name": "NDPU Number of Raw Photos",
+            "description": "Field may need to be mapped in instance 2"
+          }
+        },
+        "dropbox_raw_link": {
+          "type": "string",
+          "required": false,
+          "description": "Dropbox Raw Media Link",
+          "system_field": false,
+          "field_id": null,
+          "instance_1": {
+            "field_id": "customfield_10713",
+            "name": "NDPU Raw Media Folder Link"
+          },
+          "instance_2": {
+            "field_id": null,
+            "name": "Dropbox Raw Link",
+            "description": "Field may need to be mapped in instance 2"
+          }
+        },
+        "dropbox_edited_link": {
+          "type": "string",
+          "required": false,
+          "description": "Dropbox Edited Media Link",
+          "system_field": false,
+          "field_id": null,
+          "instance_1": {
+            "field_id": "customfield_10714",
+            "name": "NDPU Edited Media Folder Link"
+          },
+          "instance_2": {
+            "field_id": null,
+            "name": "Dropbox Edited Link",
+            "description": "Field may need to be mapped in instance 2"
+          }
+        },
+        "same_day_delivery": {
+          "type": "string",
+          "required": false,
+          "description": "Same Day Delivery Flag",
+          "system_field": false,
+          "field_id": null,
+          "instance_1": {
+            "field_id": "customfield_12573",
+            "name": "NDPU Same Day Delivery"
+          },
+          "instance_2": {
+            "field_id": null,
+            "name": "Same Day Delivery",
+            "description": "Field may need to be mapped in instance 2"
+          }
+        }
+      }
+    },
+    "Editing and Production": {
+      "description": "Editing workflow and team information",
+      "fields": {
+        "escalated_editing": {
+          "type": "string",
+          "required": false,
+          "description": "Escalated Editing Flag",
+          "system_field": false,
+          "field_id": null,
+          "instance_1": {
+            "field_id": null,
+            "name": "Escalated Editing",
+            "description": "Custom field needs to be identified"
+          },
+          "instance_2": {
+            "field_id": null,
+            "name": "Escalated Editing",
+            "description": "Custom field needs to be identified"
+          }
+        },
+        "edited_media_revision_notes": {
+          "type": "string",
+          "required": false,
+          "description": "Edited Media Revision Notes",
+          "system_field": false,
+          "field_id": null,
+          "instance_1": {
+            "field_id": "customfield_10716",
+            "name": "NDPU Edited Media Revision Notes"
+          },
+          "instance_2": {
+            "field_id": null,
+            "name": "Edited Media Revision Notes",
+            "description": "Field may need to be mapped in instance 2"
+          }
+        },
+        "ndpu_editing_team": {
+          "type": "string",
+          "required": false,
+          "description": "NDPU Editing Team",
+          "system_field": false,
+          "field_id": null,
+          "instance_1": {
+            "field_id": "customfield_12644",
+            "name": "NDPU Editing Team"
+          },
+          "instance_2": {
+            "field_id": null,
+            "name": "NDPU Editing Team",
+            "description": "Field may need to be mapped in instance 2"
+          }
+        },
+        "ndpu_service": {
+          "type": "string",
+          "required": false,
+          "description": "NDPU Service Type",
+          "system_field": false,
+          "field_id": null,
+          "instance_1": {
+            "field_id": "customfield_11104",
+            "name": "NDPU Service"
+          },
+          "instance_2": {
+            "field_id": null,
+            "name": "NDPU Service",
+            "description": "Field may need to be mapped in instance 2"
+          }
+        }
+      }
+    },
+    "Workflow Timestamps": {
+      "description": "Workflow status timestamps",
+      "fields": {
+        "scheduled": {
+          "type": "datetime",
+          "required": false,
+          "description": "Scheduled Timestamp",
+          "system_field": false,
+          "field_id": null,
+          "instance_1": {
+            "field_id": null,
+            "name": "Scheduled",
+            "description": "Workflow timestamp field"
+          },
+          "instance_2": {
+            "field_id": null,
+            "name": "Scheduled",
+            "description": "Workflow timestamp field"
+          }
+        },
+        "acknowledged": {
+          "type": "datetime",
+          "required": false,
+          "description": "Acknowledged Timestamp",
+          "system_field": false,
+          "field_id": null,
+          "instance_1": {
+            "field_id": null,
+            "name": "Acknowledged",
+            "description": "Workflow timestamp field"
+          },
+          "instance_2": {
+            "field_id": null,
+            "name": "Acknowledged",
+            "description": "Workflow timestamp field"
+          }
+        },
+        "at_listing": {
+          "type": "datetime",
+          "required": false,
+          "description": "At Listing Timestamp",
+          "system_field": false,
+          "field_id": null,
+          "instance_1": {
+            "field_id": null,
+            "name": "At Listing",
+            "description": "Workflow timestamp field"
+          },
+          "instance_2": {
+            "field_id": null,
+            "name": "At Listing",
+            "description": "Workflow timestamp field"
+          }
+        },
+        "shoot_complete": {
+          "type": "datetime",
+          "required": false,
+          "description": "Shoot Complete Timestamp",
+          "system_field": false,
+          "field_id": null,
+          "instance_1": {
+            "field_id": "customfield_12583",
+            "name": "NDPU Shoot Complete Timestamp"
+          },
+          "instance_2": {
+            "field_id": null,
+            "name": "Shoot Complete",
+            "description": "Field may need to be mapped in instance 2"
+          }
+        },
+        "uploaded": {
+          "type": "datetime",
+          "required": false,
+          "description": "Uploaded Timestamp",
+          "system_field": false,
+          "field_id": null,
+          "instance_1": {
+            "field_id": "customfield_12585",
+            "name": "NDPU Uploaded Timestamp"
+          },
+          "instance_2": {
+            "field_id": null,
+            "name": "Uploaded",
+            "description": "Field may need to be mapped in instance 2"
+          }
+        },
+        "edit_start": {
+          "type": "datetime",
+          "required": false,
+          "description": "Edit Start Timestamp",
+          "system_field": false,
+          "field_id": null,
+          "instance_1": {
+            "field_id": "customfield_12586",
+            "name": "NDPU Start Edit Timestamp"
+          },
+          "instance_2": {
+            "field_id": null,
+            "name": "Edit Start",
+            "description": "Field may need to be mapped in instance 2"
+          }
+        },
+        "final_review": {
+          "type": "datetime",
+          "required": false,
+          "description": "Final Review Timestamp",
+          "system_field": false,
+          "field_id": null,
+          "instance_1": {
+            "field_id": "customfield_12689",
+            "name": "NDPU Final Review Timestamp"
+          },
+          "instance_2": {
+            "field_id": "customfield_12703",
+            "name": "NDPU Final Review Timestamp"
+          }
+        },
+        "closed": {
+          "type": "datetime",
+          "required": false,
+          "description": "Closed Timestamp",
+          "system_field": false,
+          "field_id": null,
+          "instance_1": {
+            "field_id": "resolutiondate",
+            "name": "Resolved"
+          },
+          "instance_2": {
+            "field_id": "resolutiondate",
+            "name": "Resolved"
+          }
+        }
+      }
+    },
+    "Location and Instructions": {
+      "description": "Location details and special instructions",
+      "fields": {
+        "location_name": {
+          "type": "string",
+          "required": false,
+          "description": "Location Name",
+          "system_field": false,
+          "field_id": null,
+          "instance_1": {
+            "field_id": "customfield_11200",
+            "name": "NDPTE Location"
+          },
+          "instance_2": {
+            "field_id": null,
+            "name": "Location Name",
+            "description": "Field may need to be mapped in instance 2"
+          }
+        },
+        "ndpu_comments": {
+          "type": "string",
+          "required": false,
+          "description": "NDPU Comments",
+          "system_field": false,
+          "field_id": null,
+          "instance_1": {
+            "field_id": null,
+            "name": "NDPU Comments",
+            "description": "Comments field needs to be identified"
+          },
+          "instance_2": {
+            "field_id": null,
+            "name": "NDPU Comments",
+            "description": "Comments field needs to be identified"
+          }
+        },
+        "ndpu_editor_notes": {
+          "type": "string",
+          "required": false,
+          "description": "NDPU Notes for Editor",
+          "system_field": false,
+          "field_id": null,
+          "instance_1": {
+            "field_id": "customfield_11601",
+            "name": "NDPU Notes for Editor"
+          },
+          "instance_2": {
+            "field_id": null,
+            "name": "NDPU Editor Notes",
+            "description": "Field may need to be mapped in instance 2"
+          }
+        },
+        "ndpu_access_instructions": {
+          "type": "string",
+          "required": false,
+          "description": "NDPU Access Instructions",
+          "system_field": false,
+          "field_id": null,
+          "instance_1": {
+            "field_id": "customfield_10700",
+            "name": "NDPU Access Instructions"
+          },
+          "instance_2": {
+            "field_id": null,
+            "name": "NDPU Access Instructions",
+            "description": "Field may need to be mapped in instance 2"
+          }
+        },
+        "ndpu_special_instructions": {
+          "type": "string",
+          "required": false,
+          "description": "NDPU Special Instructions",
+          "system_field": false,
+          "field_id": null,
+          "instance_1": {
+            "field_id": "customfield_11100",
+            "name": "NDPU Special Instructions"
+          },
+          "instance_2": {
+            "field_id": null,
+            "name": "NDPU Special Instructions",
+            "description": "Field may need to be mapped in instance 2"
+          }
+        }
+      }
+    }
+  }
+}

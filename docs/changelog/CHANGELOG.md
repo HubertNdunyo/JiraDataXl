@@ -2,6 +2,73 @@
 
 All notable changes to the JIRA Sync Dashboard project will be documented in this file.
 
+## [2025-01-09] - Core Business Fields & Architecture Documentation
+
+### 🎯 Major Feature: Core Business Fields Implementation
+- ✅ **Database Migration Completed**
+  - Successfully added 25 core business fields to `jira_issues_v2` table
+  - Fields cover: Order Information, Media/Delivery, Editing/Production, Workflow Timestamps, Location/Instructions
+  - All columns created with appropriate data types (VARCHAR, TEXT, INTEGER, TIMESTAMP, BOOLEAN)
+  
+- ✅ **Field Mapping Configuration**
+  - Created `/backend/config/core_field_mappings.json` with comprehensive field definitions
+  - Organized fields into 6 logical groups for better management
+  - Included known Instance 1 custom field IDs (e.g., customfield_10501 for order number)
+  - Prepared placeholders for Instance 2 field discovery
+  
+- ✅ **Verification Tools**
+  - Created `verify_field_mappings.py` script to identify missing field mappings
+  - Script provides field search capabilities and mapping suggestions
+  - Can identify unmapped fields and suggest matches from cached data
+
+### 📚 New Documentation
+- ✅ **SYNC_ARCHITECTURE.md**
+  - Comprehensive explanation of field mapping architecture
+  - Detailed sync logic flow between JIRA instances
+  - Database design philosophy (one column per business concept)
+  - Real-world examples with actual field IDs
+  
+- ✅ **CORE_FIELDS_README.md**
+  - Complete guide to all 25 core business fields
+  - Field categories and purposes explained
+  - Database schema documentation
+  - Setup and troubleshooting instructions
+  
+- ✅ **Updated FIELD_MAPPING_GUIDE.md**
+  - Added incremental field addition documentation
+  - Explained field grouping by name
+  - Database column strategy clarification
+  - Link to sync architecture documentation
+
+### 🔧 Mapping Wizard Improvements
+- ✅ **Fixed Incremental Field Addition**
+  - Wizard now appends new fields instead of replacing existing configuration
+  - Existing "Wizard Fields" group is preserved and merged with new selections
+  - Fields with same name are updated rather than duplicated
+  - Toast messages show both new fields added and total field count
+  
+- ✅ **Field Grouping Enhancement**
+  - Fields with same name but different custom IDs are shown as single entry
+  - Example: "NDPU Final Review Timestamp" appears once with both instance IDs listed
+  - Automatic mapping of both instance IDs to same database column
+
+### 📊 Database Schema Updates
+The following fields were successfully added to `jira_issues_v2`:
+
+| Field Category | Fields Added |
+|---------------|--------------|
+| Order Info | ndpu_order_number, ndpu_client_name, ndpu_client_email, ndpu_listing_address |
+| Media/Delivery | ndpu_raw_photos, dropbox_raw_link, dropbox_edited_link, same_day_delivery |
+| Editing/Production | escalated_editing, edited_media_revision_notes, ndpu_editing_team, ndpu_service |
+| Workflow Timestamps | scheduled, acknowledged, at_listing, shoot_complete, uploaded, edit_start, final_review, closed |
+| Location/Instructions | location_name, ndpu_comments, ndpu_editor_notes, ndpu_access_instructions, ndpu_special_instructions |
+
+### Next Steps
+1. ✅ Database migration applied successfully
+2. ⏳ Run field discovery to find Instance 2 field IDs
+3. ⏳ Use verification script to identify missing mappings
+4. ⏳ Complete field configuration using mapping wizard
+
 ## [2025-08-08] - Field Mapping System & Database Improvements
 
 ### 🎯 Major Feature: Field Mapping System

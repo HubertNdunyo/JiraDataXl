@@ -1,151 +1,316 @@
 """
-JIRA issue fetching and processing functionality.
+Dynamic JIRA issue processing with configurable field mappings.
 """
 
 import logging
-from datetime import datetime, timedelta
-from typing import List, Dict, Any, Optional, Tuple
+from datetime import datetime
+from typing import Dict, Any, List, Optional, Tuple
+from dateutil import parser
+
 from .jira_client import JiraClient, JiraClientError
 from .field_processor import FieldProcessor
-from ..db import log_update, constants, get_project_mapping
+from ..db.db_issues import batch_insert_issues
+from ..db.db_config import get_field_mapping_config
 from ..db.constants import ISSUE_COLUMNS
+from ..db.db_audit import log_operation
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
 class IssueProcessingError(Exception):
-    """Exception for issue processing errors"""
+    """Custom exception for issue processing errors"""
     pass
 
-class IssueFetcher:
+def log_update(project_name: str, status: str, issues_count: int = 0, error_message: str = None):
+    """Log update to database."""
+    try:
+        log_operation('UPDATE', project_name, status, issues_count, error_message)
+    except Exception as e:
+        logger.error(f"Failed to log update: {e}")
+
+class IssueProcessor:
     """
-    Handles fetching and processing of JIRA issues.
+    Processes JIRA issues with dynamic field mapping from configuration.
     """
     
-    def __init__(
-        self,
-        client: JiraClient,
-        batch_size: int = 200,
-        lookback_days: int = 60,
-        field_config_path: Optional[str] = None
-    ):
+    def __init__(self, jira_client: JiraClient, instance_type: str):
         """
-        Initialize issue fetcher.
+        Initialize issue processor.
         
         Args:
-            client: Configured JIRA client
-            batch_size: Number of issues to fetch per request
-            lookback_days: Days of history to fetch
-            field_config_path: Path to field mapping configuration file
+            jira_client: JIRA client instance
+            instance_type: Type of JIRA instance (instance_1 or instance_2)
         """
-        self.client = client
-        self.batch_size = batch_size
-        self.lookback_days = lookback_days
+        self.jira_client = jira_client
+        self.instance_type = instance_type
+        self.field_processor = FieldProcessor()
+        self._load_field_mappings()
         
-        # Initialize field processor with config and load fields
-        self.field_processor = FieldProcessor(field_config_path)
-        self.fields = ['summary', 'status', 'project', 'updated']  # Always include basic fields
-        
-        # Add configured fields
-        for group in self.field_processor.config.get('field_groups', {}).values():
-            for field_config in group.get('fields', {}).values():
-                for instance_config in field_config.values():
-                    if isinstance(instance_config, dict) and 'field_id' in instance_config:
-                        field_id = instance_config['field_id']
-                        if isinstance(field_id, list):
-                            self.fields.extend(field_id)
-                        else:
-                            self.fields.append(field_id)
-        
-        # Remove duplicates while preserving order
-        self.fields = list(dict.fromkeys(self.fields))
-
-    def build_jql_query(self, project_key: str) -> str:
+    def _load_field_mappings(self):
+        """Load field mappings from database configuration."""
+        try:
+            config = get_field_mapping_config()
+            if config:
+                self.field_mappings = config.get('field_groups', {})
+                logger.info(f"Loaded field mappings with {sum(len(g.get('fields', {})) for g in self.field_mappings.values())} fields")
+            else:
+                self.field_mappings = {}
+                logger.warning("No field mappings found in configuration")
+        except Exception as e:
+            logger.error(f"Failed to load field mappings: {e}")
+            self.field_mappings = {}
+    
+    def reload_mappings(self):
+        """Reload field mappings from database."""
+        self._load_field_mappings()
+    
+    def get_field_mapping_for_column(self, column_name: str) -> Optional[Dict]:
         """
-        Build JQL query for fetching issues.
+        Get field mapping configuration for a database column.
         
         Args:
-            project_key: Project to fetch issues from
+            column_name: Database column name
             
         Returns:
-            JQL query string
+            Field mapping configuration or None
         """
-        date_limit = (datetime.now() - timedelta(days=self.lookback_days)
-                    ).strftime('%Y-%m-%d')
+        for group in self.field_mappings.values():
+            fields = group.get('fields', {})
+            if column_name in fields:
+                field_config = fields[column_name]
+                instance_config = field_config.get(self.instance_type, {})
+                
+                # Build complete mapping
+                return {
+                    'field_id': instance_config.get('field_id'),
+                    'field_ids': instance_config.get('field_ids'),  # For combined fields
+                    'type': field_config.get('type', 'string'),
+                    'system_field': field_config.get('system_field', False),
+                    'field_path': field_config.get('field_path'),
+                    'source': field_config.get('source'),
+                    'combine_method': field_config.get('combine_method', 'space')
+                }
+        return None
+    
+    def extract_field_value(self, issue_data: Dict, field_mapping: Dict) -> Any:
+        """
+        Extract field value based on mapping configuration.
         
-        return (
-            f"project = {project_key} AND "
-            f"created >= {date_limit} "
-            "ORDER BY updated DESC"
-        )
-
+        Args:
+            issue_data: Complete issue data from JIRA
+            field_mapping: Field mapping configuration
+            
+        Returns:
+            Extracted and processed field value
+        """
+        if not field_mapping:
+            return None
+        
+        # Handle different field sources
+        source = field_mapping.get('source', 'field')
+        
+        if source == 'transitions':
+            # Extract from issue transitions/changelog
+            return self._extract_from_transitions(
+                issue_data.get('changelog', {}),
+                field_mapping.get('transition_name')
+            )
+        
+        elif source == 'system':
+            # Extract from system field path
+            field_path = field_mapping.get('field_path', '')
+            return self._extract_by_path(issue_data, field_path)
+        
+        elif field_mapping.get('field_ids'):
+            # Combine multiple fields
+            values = []
+            for field_id in field_mapping['field_ids']:
+                value = self._extract_custom_field(issue_data.get('fields', {}), field_id)
+                if value:
+                    values.append(str(value))
+            
+            if values:
+                combine_method = field_mapping.get('combine_method', 'space')
+                if combine_method == 'space':
+                    return ' '.join(values)
+                elif combine_method == 'comma':
+                    return ', '.join(values)
+                elif combine_method == 'first':
+                    return values[0] if values else None
+            return None
+        
+        elif field_mapping.get('field_id'):
+            # Single custom field
+            return self._extract_custom_field(
+                issue_data.get('fields', {}),
+                field_mapping['field_id']
+            )
+        
+        elif field_mapping.get('field_path'):
+            # System field with path
+            return self._extract_by_path(issue_data, field_mapping['field_path'])
+        
+        return None
+    
+    def _extract_by_path(self, data: Dict, path: str) -> Any:
+        """Extract value by dot-notation path."""
+        if not path:
+            return None
+        
+        parts = path.split('.')
+        current = data
+        
+        for part in parts:
+            if isinstance(current, dict):
+                current = current.get(part)
+            else:
+                return None
+            
+            if current is None:
+                return None
+        
+        return current
+    
+    def _extract_custom_field(self, fields: Dict, field_id: str) -> Any:
+        """Extract custom field value."""
+        if not field_id:
+            return None
+        
+        value = fields.get(field_id)
+        
+        # Handle special field types
+        if isinstance(value, dict):
+            # Option field
+            if 'value' in value:
+                return value['value']
+            # User field
+            elif 'displayName' in value:
+                return value['displayName']
+            # Other complex field
+            elif 'name' in value:
+                return value['name']
+        
+        return value
+    
+    def _extract_from_transitions(self, changelog: Dict, transition_name: str) -> Optional[datetime]:
+        """Extract timestamp from issue transitions."""
+        if not changelog or not transition_name:
+            return None
+        
+        # Map of transition names to status values
+        transition_mappings = {
+            'scheduled': ['scheduled', 'Scheduled'],
+            'acknowledged': ['acknowledged', 'ACKNOWLEDGED', 'Acknowledged'],
+            'at_listing': ['at listing', 'At Listing', 'AT LISTING'],
+            'shoot_complete': ['shoot complete', 'Shoot Complete', 'SHOOT COMPLETE'],
+            'uploaded': ['uploaded', 'Uploaded', 'UPLOADED'],
+            'edit_start': ['edit start', 'Edit Start', 'Edit', 'EDIT'],
+            'final_review': ['final review', 'Final Review', 'Managing Partner Ready'],
+            'closed': ['closed', 'Closed', 'CLOSED', 'Complete', 'Done']
+        }
+        
+        valid_statuses = transition_mappings.get(transition_name, [transition_name])
+        latest_timestamp = None
+        
+        for history in changelog.get('histories', []):
+            created = history.get('created')
+            if not created:
+                continue
+            
+            try:
+                # Parse timestamp
+                timestamp = parser.parse(created)
+                
+                # Check status changes
+                for item in history.get('items', []):
+                    if item.get('field') == 'status':
+                        to_status = item.get('toString', '')
+                        if any(status.lower() == to_status.lower() for status in valid_statuses):
+                            if not latest_timestamp or timestamp > latest_timestamp:
+                                latest_timestamp = timestamp
+            except Exception as e:
+                logger.debug(f"Failed to parse transition timestamp: {e}")
+                continue
+        
+        return latest_timestamp
+    
     def fetch_project_issues(
         self,
         project_key: str,
-        instance_type: str
+        start_at: int = 0,
+        updated_after: Optional[datetime] = None,
+        stop_check: Optional[callable] = None,
+        batch_size: int = 100
     ) -> List[Tuple]:
         """
-        Fetch all issues for a project.
+        Fetch and process issues for a project using dynamic field mappings.
         
         Args:
-            project_key: Project to fetch issues from
-            instance_type: Type of JIRA instance
+            project_key: JIRA project key
+            start_at: Starting index for pagination
+            updated_after: Fetch only issues updated after this time
+            stop_check: Function to check if sync should stop
+            batch_size: Number of issues per batch
             
         Returns:
-            List of processed issue tuples
-            
-        Raises:
-            IssueProcessingError: If fetching or processing fails
+            List of processed issue tuples ready for database insertion
         """
-        issues_data = []
-        start_at = 0
-        total_issues = 0
-        fetch_start_time = datetime.now()
-
         try:
+            logger.info(f"Fetching issues for project {project_key} using dynamic field mappings")
+            
+            # Reload mappings to get latest configuration
+            self.reload_mappings()
+            
+            # Build JQL query
+            jql = f'project = {project_key}'
+            if updated_after:
+                jql += f' AND updated >= "{updated_after.strftime("%Y-%m-%d %H:%M")}"'
+            jql += ' ORDER BY updated DESC'
+            
+            issues_data = []
+            total_fetched = 0
+            fetch_start_time = datetime.now()
+            
             while True:
-                # Search for issues
-                response = self.client.search_issues(
-                    jql=self.build_jql_query(project_key),
-                    fields=self.fields,
-                    start_at=start_at,
-                    max_results=self.batch_size,
+                if stop_check and stop_check():
+                    logger.info(f"Sync stopped by user for project {project_key}")
+                    break
+                
+                # Fetch batch with changelog for transitions
+                result = self.jira_client.search_issues(
+                    jql=jql,
+                    start_at=start_at + total_fetched,
+                    max_results=batch_size,
                     expand=['changelog']
                 )
                 
-                # Get total on first request
-                if start_at == 0:
-                    total_issues = response.get('total', 0)
-                    if total_issues == 0:
-                        logger.info(f"No issues found for project {project_key}")
-                        return []
-
-                batch_issues = response.get('issues', [])
-                
-                # Process issues in current batch
-                for issue in batch_issues:
-                    processed_issue = self.process_issue(
-                        issue,
-                        project_key,
-                        instance_type
-                    )
-                    if processed_issue:
-                        issues_data.append(processed_issue)
-
-                # Update progress
-                start_at += self.batch_size
-                
-                # Log progress every 500 issues
-                if len(issues_data) % 500 == 0:
-                    logger.info(
-                        f"Processed {len(issues_data)} out of {total_issues} "
-                        f"issues from project {project_key}"
-                    )
-
-                if start_at >= total_issues:
+                if not result or 'issues' not in result:
                     break
-
-            # Log final metrics
+                
+                batch_issues = result['issues']
+                if not batch_issues:
+                    break
+                
+                # Process each issue
+                for issue in batch_issues:
+                    try:
+                        processed = self.process_issue(issue, project_key)
+                        if processed:
+                            issues_data.append(processed)
+                    except Exception as e:
+                        logger.debug(f"Failed to process issue {issue.get('key', 'unknown')}: {e}")
+                        continue
+                
+                total_fetched += len(batch_issues)
+                
+                # Check if more issues available
+                total_available = result.get('total', 0)
+                if start_at + total_fetched >= total_available:
+                    break
+                
+                logger.debug(f"Fetched {total_fetched}/{total_available} issues for {project_key}")
+            
+            # Log completion
             total_duration = (datetime.now() - fetch_start_time).total_seconds()
             if issues_data:
                 processing_rate = len(issues_data) / total_duration
@@ -154,328 +319,98 @@ class IssueFetcher:
                     f"{project_key} in {total_duration:.2f}s "
                     f"({processing_rate:.2f} issues/s)"
                 )
-
+            
             return issues_data
-
-        except JiraClientError as e:
+            
+        except Exception as e:
             error_msg = f"Failed to fetch issues for project {project_key}: {e}"
             logger.error(error_msg)
             log_update(project_key, "Failed", error_message=error_msg)
             raise IssueProcessingError(error_msg)
-            
-        except Exception as e:
-            error_msg = f"Unexpected error processing project {project_key}: {e}"
-            logger.exception(error_msg)
-            log_update(project_key, "Failed", error_message=error_msg)
-            raise IssueProcessingError(error_msg)
-
+    
     def process_issue(
         self,
         issue: Dict[str, Any],
-        project_key: str,
-        instance_type: str
+        project_key: str
     ) -> Optional[Tuple]:
         """
-        Process individual JIRA issue.
+        Process individual JIRA issue using dynamic field mappings.
         
         Args:
             issue: Raw issue data from JIRA
             project_key: Project key
-            instance_type: Type of JIRA instance
             
         Returns:
-            Tuple of processed issue data or None if processing fails
+            Tuple of processed issue data matching ISSUE_COLUMNS order
         """
         try:
-            fields = issue['fields']
             issue_key = issue.get('key')
             
-            # Basic fields
-            summary = self.field_processor.extract_field_value(fields, 'summary')
-            status = self.field_processor.extract_field_value(fields, 'status.name')
+            # Build record tuple matching ISSUE_COLUMNS order
+            record = []
             
-            # Extract updated timestamp from JIRA
-            updated_str = self.field_processor.extract_field_value(fields, 'updated')
-            updated_timestamp = None
-            if updated_str:
-                try:
-                    # Parse JIRA timestamp format (e.g., "2025-06-25T19:31:20.738+0800")
-                    from dateutil import parser
-                    updated_timestamp = parser.parse(updated_str)
-                except Exception as e:
-                    logger.warning(f"Failed to parse updated timestamp for {issue_key}: {e}")
-                    updated_timestamp = datetime.now()
-            
-            # Order and photos fields
-            order_number = self.field_processor.extract_field_value(fields, 'customfield_10501')
-            raw_photos = None
-            for field_id in ['customfield_12602', 'customfield_12581']:
-                raw_photos = self.field_processor.extract_field_value(fields, field_id)
-                if raw_photos is not None:
-                    break
-            
-            # Link fields
-            dropbox_raw = self.field_processor.extract_field_value(fields, 'customfield_10713')
-            dropbox_edited = self.field_processor.extract_field_value(fields, 'customfield_10714')
-            
-            # Delivery and editing fields
-            same_day = self.field_processor.extract_field_value(fields, 'customfield_12661')
-            if isinstance(same_day, dict):
-                same_day = same_day.get('value')
-            
-            escalated = self.field_processor.extract_field_value(fields, 'customfield_11712')
-            revision_notes = self.field_processor.extract_field_value(fields, 'customfield_10716')
-            
-            # Team field
-            editing_team = None
-            for field_id in ['customfield_12648', 'customfield_12644']:
-                editing_team = self.field_processor.extract_field_value(fields, field_id)
-                if editing_team is not None:
-                    break
-            
-            # Service field
-            service = (
-                self.field_processor.extract_field_value(fields, 'customfield_11104') or
-                self.field_processor.extract_field_value(fields, 'customfield_11700')
-            )
-            
-            # Client fields
-            client_name = self.field_processor.extract_field_value(fields, 'customfield_10600')
-            client_email = self.field_processor.extract_field_value(fields, 'customfield_10601')
-            listing_address = self.field_processor.extract_field_value(fields, 'customfield_10603') # Extract listing address
+            for column in ISSUE_COLUMNS:
+                # Special handling for certain columns
+                if column == 'issue_key':
+                    record.append(issue_key)
+                elif column == 'project_name':
+                    record.append(project_key)
+                elif column == 'last_updated':
+                    # Use JIRA's updated timestamp or current time
+                    updated = self._extract_by_path(issue, 'fields.updated')
+                    if updated:
+                        try:
+                            record.append(parser.parse(updated))
+                        except:
+                            record.append(datetime.now())
+                    else:
+                        record.append(datetime.now())
+                else:
+                    # Get field mapping for this column
+                    mapping = self.get_field_mapping_for_column(column)
                     
-            comments = self.field_processor.extract_field_value(fields, 'customfield_10612')
-            editor_notes = self.field_processor.extract_field_value(fields, 'customfield_11601')
-            
-            # Combined instruction fields
-            access_instructions = []
-            for field_id in ['customfield_10700', 'customfield_12594', 'customfield_12611']:
-                value = self.field_processor.extract_field_value(fields, field_id)
-                if value:
-                    access_instructions.append(str(value))
-            access_instructions = ' '.join(access_instructions) if access_instructions else None
-            
-            special_instructions = []
-            for field_id in ['customfield_11100', 'customfield_12595', 'customfield_12612']:
-                value = self.field_processor.extract_field_value(fields, field_id)
-                if value:
-                    special_instructions.append(str(value))
-            special_instructions = ' '.join(special_instructions) if special_instructions else None
-            
-            # Process transitions
-            transitions = self.process_transitions(issue.get('changelog', {}))
-            
-            # Build record tuple matching ISSUE_COLUMNS order exactly
-            record = (
-                issue_key,                    # issue_key
-                summary,                      # summary
-                status,                       # status
-                order_number,                 # ndpu_order_number
-                raw_photos,                   # ndpu_raw_photos
-                dropbox_raw,                  # dropbox_raw_link
-                dropbox_edited,               # dropbox_edited_link
-                self.field_processor.sanitize_value(same_day, 'boolean'),      # same_day_delivery
-                self.field_processor.sanitize_value(escalated, 'boolean'),     # escalated_editing
-                revision_notes,               # edited_media_revision_notes
-                editing_team,                 # ndpu_editing_team
-                transitions.get('scheduled'),  # scheduled
-                transitions.get('acknowledged'), # acknowledged
-                transitions.get('at_listing'), # at_listing
-                transitions.get('shoot_complete'), # shoot_complete
-                transitions.get('uploaded'),   # uploaded
-                transitions.get('edit_start'), # edit_start
-                transitions.get('final_review'), # final_review
-                transitions.get('closed'),     # closed
-                service,                      # ndpu_service
-                project_key,                  # project_name
-                updated_timestamp or datetime.now(),  # last_updated - use JIRA updated time or fallback to now
-                self._get_location_name(project_key, fields),  # location_name - use mapping or fallback to project name
-                client_name,                  # ndpu_client_name
-                client_email,                 # ndpu_client_email
-                listing_address,              # ndpu_listing_address (Added)
-                comments,                     # ndpu_comments
-                editor_notes,                 # ndpu_editor_notes
-                access_instructions,          # ndpu_access_instructions
-                special_instructions          # ndpu_special_instructions
-            )
+                    if mapping:
+                        # Extract value using mapping
+                        value = self.extract_field_value(issue, mapping)
+                        
+                        # Sanitize based on type
+                        field_type = mapping.get('type', 'string')
+                        sanitized = self.field_processor.sanitize_value(value, field_type, column)
+                        record.append(sanitized)
+                    else:
+                        # No mapping found, use None
+                        record.append(None)
             
             # Validate record structure
             if len(record) != len(ISSUE_COLUMNS):
-                logger.debug(
-                    f"Record structure for {issue_key}: "
+                logger.error(
+                    f"Record structure mismatch for {issue_key}: "
                     f"Expected {len(ISSUE_COLUMNS)} columns, got {len(record)}"
                 )
                 return None
             
-            return record
+            return tuple(record)
             
         except Exception as e:
             issue_key = issue.get('key', 'unknown')
-            logger.debug(
-                f"Failed to process {issue_key}: {str(e)}. "
-                "This is expected if record structure changed."
-            )
+            logger.debug(f"Failed to process {issue_key}: {e}")
             return None
-
-    @staticmethod
-    def process_transitions(changelog: Dict[str, Any]) -> Dict[str, Optional[datetime]]:
-        """
-        Process issue transitions from changelog.
-        
-        Args:
-            changelog: Issue changelog data
-            
-        Returns:
-            Dict mapping transition names to timestamps
-        """
-        transitions = {
-            "scheduled": None,
-            "acknowledged": None,
-            "at_listing": None,
-            "shoot_complete": None,
-            "uploaded": None,
-            "edit_start": None,
-            "final_review": None,
-            "escalated_editing": None,
-            "closed": None
-        }
-        
-        # Status mapping
-        STATUS_MAPPING = {
-            'scheduled': {
-                'scheduled', 'Scheduled'
-            },
-            'acknowledged': {
-                'acknowledged', 'ack', 'acknowledged by agent',
-                'acknowledged', 'ACKNOWLEDGED'
-            },
-            'at_listing': {
-                'at listing', 'listing', 'at_listing', 'At Listing'
-            },
-            'shoot_complete': {
-                'shoot complete', 'shooting complete',
-                'shoot_complete', 'Shoot Complete'
-            },
-            'uploaded': {
-                'uploaded', 'upload complete',
-                'upload_complete', 'Uploaded'
-            },
-            'edit_start': {
-                'edit start', 'editing started',
-                'edit_start', 'Edit'
-            },
-            'final_review': {
-                'final review', 'final_review',
-                'pending review', 'Final Review',
-                'Managing Partner Ready'
-            },
-            'escalated_editing': {
-                'escalated editing', 'Escalated Editing'
-            },
-            'closed': {
-                'closed', 'complete', 'completed',
-                'done', 'Closed'
-            }
-        }
-        
-        try:
-            if not changelog:
-                return transitions
-
-            for history in changelog.get('histories', []):
-                created = history.get('created')
-                if not created:
-                    continue
-                    
-                # Handle various timezone formats
-                created = created.replace('Z', '+00:00')
-                if '+' in created and ':' not in created[-5:]:
-                    # Convert +HHMM to +HH:MM
-                    parts = created.rsplit('+', 1)
-                    if len(parts) == 2:
-                        tz = parts[1]
-                        if len(tz) == 4:  # HHMM format
-                            created = f"{parts[0]}+{tz[:2]}:{tz[2:]}"
-                elif '-' in created and ':' not in created[-5:]:
-                    # Convert -HHMM to -HH:MM
-                    parts = created.rsplit('-', 1)
-                    if len(parts) == 2:
-                        tz = parts[1]
-                        if len(tz) == 4:  # HHMM format
-                            created = f"{parts[0]}-{tz[:2]}:{tz[2:]}"
-                try:
-                    created_date = datetime.fromisoformat(created)
-                except ValueError as e:
-                    logger.debug(f"Invalid timestamp format: {created}")
-                    continue
-                
-                for item in history.get('items', []):
-                    if item.get('field') == 'status':
-                        to_status = item.get('toString', '').strip()
-                        
-                        # Check against mapped statuses
-                        for transition_key, valid_statuses in STATUS_MAPPING.items():
-                            if to_status.lower() in {s.lower() for s in valid_statuses}:
-                                if (transitions[transition_key] is None or
-                                    created_date > transitions[transition_key]):
-                                    transitions[transition_key] = created_date
-                                break
-
-        except Exception as e:
-            # Only log unique timestamp format errors once
-            if "Invalid isoformat string" in str(e):
-                error_msg = str(e).split(": ")[1] if ": " in str(e) else str(e)
-                logger.debug(f"Skipping invalid timestamp: {error_msg}")
-            else:
-                logger.error(f"Error processing transitions: {e}")
-            
-        return transitions
-
-    def _get_location_name(self, project_key: str, fields: Dict[str, Any]) -> str:
-        """
-        Get location name from JIRA project name.
-        
-        Args:
-            project_key: Project key
-            fields: JIRA issue fields
-            
-        Returns:
-            Location name string
-        """
-        try:
-            # First try to get the project name directly from JIRA
-            project_name = fields.get('project', {}).get('name')
-            if project_name:
-                return project_name
-                
-            # If no project name in JIRA, try to get from project_mappings_v2 table
-            project_mapping = get_project_mapping(project_key)
-            if project_mapping and project_mapping.get('location_name'):
-                return project_mapping['location_name']
-                
-            # Last resort: use project key
-            return project_key
-            
-        except Exception as e:
-            logger.debug(f"Error getting location name for {project_key}: {e}")
-            # Fall back to project key
-            return project_key
     
-    @staticmethod
-    def _format_error_summary(errors):
-        """Format error summary to avoid duplicate messages."""
-        if not errors:
-            return ""
+    def store_issues(self, issues_data: List[Tuple]) -> int:
+        """
+        Store processed issues in database.
         
-        error_counts = {}
-        for error in errors:
-            error_counts[error] = error_counts.get(error, 0) + 1
+        Args:
+            issues_data: List of issue tuples
             
-        summary = []
-        for error, count in error_counts.items():
-            if count > 1:
-                summary.append(f"{error} (x{count})")
-            else:
-                summary.append(error)
-                
-        return "\n".join(summary)
+        Returns:
+            Number of issues stored
+        """
+        if not issues_data:
+            return 0
+        
+        try:
+            return batch_insert_issues(issues_data)
+        except Exception as e:
+            logger.error(f"Failed to store issues: {e}")
+            raise IssueProcessingError(f"Database storage failed: {e}")

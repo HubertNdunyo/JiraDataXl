@@ -1,0 +1,283 @@
+{
+  "field_groups": {
+    "Legacy Core Fields": {
+      "description": "Fields extracted from hardcoded jira_issues.py",
+      "fields": {
+        "issue_key": {
+          "type": "string",
+          "system_field": true,
+          "field_path": "key",
+          "description": "JIRA Issue Key"
+        },
+        "summary": {
+          "type": "string",
+          "system_field": true,
+          "field_path": "fields.summary",
+          "description": "Issue Summary"
+        },
+        "status": {
+          "type": "string",
+          "system_field": true,
+          "field_path": "fields.status.name",
+          "description": "Issue Status"
+        },
+        "project_name": {
+          "type": "string",
+          "system_field": true,
+          "field_path": "fields.project.key",
+          "description": "Project Key"
+        },
+        "last_updated": {
+          "type": "datetime",
+          "system_field": true,
+          "field_path": "fields.updated",
+          "description": "Last Updated Timestamp"
+        },
+        "ndpu_order_number": {
+          "type": "string",
+          "line": 210,
+          "instance_1": {
+            "field_id": "customfield_10501"
+          },
+          "instance_2": {
+            "field_id": "customfield_10501"
+          },
+          "description": "NDPU Order Number"
+        },
+        "ndpu_raw_photos": {
+          "type": "integer",
+          "line": "212-215",
+          "instance_1": {
+            "field_id": "customfield_12581"
+          },
+          "instance_2": {
+            "field_id": "customfield_12602"
+          },
+          "description": "Number of Raw Photos",
+          "notes": "Tries multiple field IDs"
+        },
+        "dropbox_raw_link": {
+          "type": "string",
+          "line": 218,
+          "instance_1": {
+            "field_id": "customfield_10713"
+          },
+          "instance_2": {
+            "field_id": "customfield_10713"
+          },
+          "description": "Dropbox Raw Media Link"
+        },
+        "dropbox_edited_link": {
+          "type": "string",
+          "line": 219,
+          "instance_1": {
+            "field_id": "customfield_10714"
+          },
+          "instance_2": {
+            "field_id": "customfield_10714"
+          },
+          "description": "Dropbox Edited Media Link"
+        },
+        "same_day_delivery": {
+          "type": "boolean",
+          "line": "222-224",
+          "instance_1": {
+            "field_id": "customfield_12661"
+          },
+          "instance_2": {
+            "field_id": "customfield_12661"
+          },
+          "description": "Same Day Delivery Flag",
+          "notes": "Extracts from dict value"
+        },
+        "escalated_editing": {
+          "type": "boolean",
+          "line": 226,
+          "instance_1": {
+            "field_id": "customfield_11712"
+          },
+          "instance_2": {
+            "field_id": "customfield_11712"
+          },
+          "description": "Escalated Editing Flag"
+        },
+        "edited_media_revision_notes": {
+          "type": "string",
+          "line": 227,
+          "instance_1": {
+            "field_id": "customfield_10716"
+          },
+          "instance_2": {
+            "field_id": "customfield_10716"
+          },
+          "description": "Revision Notes"
+        },
+        "ndpu_editing_team": {
+          "type": "string",
+          "line": "230-234",
+          "instance_1": {
+            "field_id": "customfield_12644"
+          },
+          "instance_2": {
+            "field_id": "customfield_12648"
+          },
+          "description": "Editing Team",
+          "notes": "Tries multiple field IDs"
+        },
+        "ndpu_service": {
+          "type": "string",
+          "line": "237-240",
+          "instance_1": {
+            "field_id": "customfield_11104"
+          },
+          "instance_2": {
+            "field_id": "customfield_11700"
+          },
+          "description": "Service Type",
+          "notes": "Falls back to second field"
+        },
+        "ndpu_client_name": {
+          "type": "string",
+          "line": 243,
+          "instance_1": {
+            "field_id": "customfield_10600"
+          },
+          "instance_2": {
+            "field_id": "customfield_10600"
+          },
+          "description": "Client Name"
+        },
+        "ndpu_client_email": {
+          "type": "string",
+          "line": 244,
+          "instance_1": {
+            "field_id": "customfield_10601"
+          },
+          "instance_2": {
+            "field_id": "customfield_10601"
+          },
+          "description": "Client Email"
+        },
+        "ndpu_listing_address": {
+          "type": "string",
+          "line": 245,
+          "instance_1": {
+            "field_id": "customfield_10603"
+          },
+          "instance_2": {
+            "field_id": "customfield_10603"
+          },
+          "description": "Listing Address"
+        },
+        "ndpu_comments": {
+          "type": "string",
+          "line": 247,
+          "instance_1": {
+            "field_id": "customfield_10612"
+          },
+          "instance_2": {
+            "field_id": "customfield_10612"
+          },
+          "description": "Comments"
+        },
+        "ndpu_editor_notes": {
+          "type": "string",
+          "line": 248,
+          "instance_1": {
+            "field_id": "customfield_11601"
+          },
+          "instance_2": {
+            "field_id": "customfield_11601"
+          },
+          "description": "Editor Notes"
+        },
+        "ndpu_access_instructions": {
+          "type": "string",
+          "line": "251-256",
+          "instance_1": {
+            "field_ids": [
+              "customfield_10700",
+              "customfield_12594",
+              "customfield_12611"
+            ]
+          },
+          "instance_2": {
+            "field_ids": [
+              "customfield_10700",
+              "customfield_12594",
+              "customfield_12611"
+            ]
+          },
+          "description": "Access Instructions",
+          "notes": "Combines multiple fields with space"
+        },
+        "ndpu_special_instructions": {
+          "type": "string",
+          "line": "258-263",
+          "instance_1": {
+            "field_ids": [
+              "customfield_11100",
+              "customfield_12595",
+              "customfield_12612"
+            ]
+          },
+          "instance_2": {
+            "field_ids": [
+              "customfield_11100",
+              "customfield_12595",
+              "customfield_12612"
+            ]
+          },
+          "description": "Special Instructions",
+          "notes": "Combines multiple fields with space"
+        },
+        "scheduled": {
+          "type": "datetime",
+          "source": "transitions",
+          "description": "Scheduled Timestamp"
+        },
+        "acknowledged": {
+          "type": "datetime",
+          "source": "transitions",
+          "description": "Acknowledged Timestamp"
+        },
+        "at_listing": {
+          "type": "datetime",
+          "source": "transitions",
+          "description": "At Listing Timestamp"
+        },
+        "shoot_complete": {
+          "type": "datetime",
+          "source": "transitions",
+          "description": "Shoot Complete Timestamp"
+        },
+        "uploaded": {
+          "type": "datetime",
+          "source": "transitions",
+          "description": "Uploaded Timestamp"
+        },
+        "edit_start": {
+          "type": "datetime",
+          "source": "transitions",
+          "description": "Edit Start Timestamp"
+        },
+        "final_review": {
+          "type": "datetime",
+          "source": "transitions",
+          "description": "Final Review Timestamp"
+        },
+        "closed": {
+          "type": "datetime",
+          "source": "transitions",
+          "description": "Closed Timestamp"
+        },
+        "location_name": {
+          "type": "string",
+          "source": "project_mapping",
+          "description": "Location Name",
+          "notes": "Derived from project name"
+        }
+      }
+    }
+  }
+}

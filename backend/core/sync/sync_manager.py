@@ -9,7 +9,7 @@ from typing import Dict, List, Optional, Any
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from ..jira import (
     JiraClient,
-    IssueFetcher,
+    IssueProcessor,
     FieldProcessor,
     JiraClientError,
     IssueProcessingError
@@ -146,7 +146,7 @@ class SyncManager:
         self._total_projects = 0
         self._completed_projects = 0
         
-        # Store performance config for IssueFetcher
+        # Store performance config for IssueProcessor
         self.performance_config = performance_config or {}
 
     def stop_sync(self):
@@ -157,6 +157,14 @@ class SyncManager:
     def is_stopped(self) -> bool:
         """Check if sync has been stopped."""
         return self._stop_event.is_set()
+    
+    def _get_lookback_date(self) -> Optional[datetime]:
+        """Get the date to look back for updated issues."""
+        from datetime import timedelta
+        lookback_days = self.performance_config.get('lookback_days', 60)
+        if lookback_days > 0:
+            return datetime.now() - timedelta(days=lookback_days)
+        return None
 
     def _update_progress(self):
         """Update and log sync progress."""
@@ -345,18 +353,18 @@ class SyncManager:
         start_time = datetime.now()
         
         try:
-            # Create issue fetcher with field config and performance settings
-            fetcher = IssueFetcher(
+            # Create issue processor with dynamic field mappings
+            processor = IssueProcessor(
                 client,
-                batch_size=self.performance_config.get('batch_size', 200),
-                lookback_days=self.performance_config.get('lookback_days', 60),
-                field_config_path=self.field_processor.config_path
+                instance_type
             )
             
-            # Fetch and process issues
-            issues_data = fetcher.fetch_project_issues(
+            # Fetch and process issues with performance settings
+            issues_data = processor.fetch_project_issues(
                 project_key,
-                instance_type
+                updated_after=self._get_lookback_date(),
+                stop_check=self.is_stopped,
+                batch_size=self.performance_config.get('batch_size', 200)
             )
             
             if not issues_data:

@@ -2,6 +2,16 @@
 
 A high-performance web application for monitoring and managing JIRA synchronization operations with a Next.js frontend and FastAPI backend.
 
+## 📚 Documentation
+
+**All documentation has been organized in the [`docs/`](./docs/) folder.**
+
+- 📖 **[Documentation Index](./docs/README.md)** - Start here for comprehensive documentation
+- 🏗️ **[Architecture](./docs/architecture/)** - System design and technical architecture
+- 📝 **[Guides](./docs/guides/)** - How-to guides and configuration instructions
+- 🐳 **[Deployment](./docs/deployment/)** - Docker and deployment documentation
+- 🧪 **[Testing](./docs/testing/)** - Testing guides and utilities
+
 ## 🚀 Features
 
 - **Real-time Dashboard**: Monitor sync status, progress, and system health

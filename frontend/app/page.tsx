@@ -5,7 +5,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
-import { Play, Square, RefreshCw, Activity, Database, TrendingUp, Clock } from 'lucide-react'
+import { Play, Square, RefreshCw, Activity, Database, TrendingUp, Clock, Trash2, AlertTriangle } from 'lucide-react'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { useToast } from '@/hooks/use-toast'
 import DashboardLayout from './dashboard-layout'
 
 interface SystemStatus {
@@ -41,6 +52,10 @@ export default function Dashboard() {
   const [statsSummary, setStatsSummary] = useState<SyncStatsSummary | null>(null)
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
+  const [clearDialogOpen, setClearDialogOpen] = useState(false)
+  const [clearing, setClearing] = useState(false)
+  const [issueCount, setIssueCount] = useState<number | null>(null)
+  const { toast } = useToast()
 
   const fetchStatus = async () => {
     try {
@@ -98,6 +113,68 @@ export default function Dashboard() {
     } catch (error) {
       console.error('Failed to stop sync:', error)
     }
+  }
+
+  const fetchIssueCount = async () => {
+    try {
+      const response = await fetch('/api/admin/issues/count', {
+        headers: {
+          'x-admin-key': 'jira-admin-key-2024'
+        }
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setIssueCount(data.total_issues)
+      }
+    } catch (error) {
+      console.error('Failed to fetch issue count:', error)
+    }
+  }
+
+  const handleClearTable = async () => {
+    setClearing(true)
+    try {
+      const response = await fetch('/api/admin/clear-issues-table', {
+        method: 'DELETE',
+        headers: {
+          'x-admin-key': 'jira-admin-key-2024',
+          'x-user': 'dashboard-user'
+        }
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        toast({
+          title: "Table Cleared Successfully",
+          description: `Deleted ${data.records_deleted} records from jira_issues_v2 table`,
+        })
+        setIssueCount(0)
+        fetchStatus() // Refresh the dashboard
+      } else {
+        const error = await response.text()
+        toast({
+          title: "Failed to Clear Table",
+          description: error || "An error occurred while clearing the table",
+          variant: "destructive"
+        })
+      }
+    } catch (error) {
+      console.error('Failed to clear table:', error)
+      toast({
+        title: "Error",
+        description: "Failed to connect to the server",
+        variant: "destructive"
+      })
+    } finally {
+      setClearing(false)
+      setClearDialogOpen(false)
+    }
+  }
+
+  const handleOpenClearDialog = async () => {
+    // Fetch current issue count before showing dialog
+    await fetchIssueCount()
+    setClearDialogOpen(true)
   }
 
   const getStatusColor = (status: string) => {
@@ -300,10 +377,59 @@ export default function Dashboard() {
                 <RefreshCw className="w-4 h-4" />
                 Refresh
               </Button>
+              <Button
+                onClick={handleOpenClearDialog}
+                variant="outline"
+                className="flex items-center gap-2 border-red-200 hover:bg-red-50 hover:text-red-600"
+                disabled={clearing || syncing}
+              >
+                <Trash2 className="w-4 h-4" />
+                Clear Data
+              </Button>
             </div>
           </CardContent>
         </Card>
       </div>
+
+      {/* Clear Table Confirmation Dialog */}
+      <AlertDialog open={clearDialogOpen} onOpenChange={setClearDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-red-500" />
+              Clear All Synced Data?
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2">
+                <div>
+                  This action will permanently delete all synced issues from the jira_issues_v2 table.
+                </div>
+                {issueCount !== null && issueCount > 0 && (
+                  <div className="font-semibold text-red-600">
+                    Warning: This will delete {issueCount.toLocaleString()} records!
+                  </div>
+                )}
+                <div>
+                  This is useful for testing that your field mappings are working correctly with a fresh sync.
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  Note: This only clears the local database. JIRA data remains unchanged.
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={clearing}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleClearTable}
+              disabled={clearing}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {clearing ? 'Clearing...' : 'Clear All Data'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   )
 }

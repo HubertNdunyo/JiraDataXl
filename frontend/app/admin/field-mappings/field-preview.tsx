@@ -24,6 +24,7 @@ interface PreviewData {
     value: string
     raw_value: string
   }>
+  error?: string
 }
 
 export function FieldPreview({ fieldId, instance, fieldName, disabled }: FieldPreviewProps) {

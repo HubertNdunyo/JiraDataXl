@@ -1,53 +1,55 @@
-# JIRA Automation Test Scripts
+# JIRA Testing Documentation
 
 ## Overview
 
-This directory contains automated test scripts for verifying JIRA integration functionality. The scripts test issue creation, workflow transitions, field validations, and cleanup operations.
+This document describes testing approaches for the JIRA Sync Dashboard. While dedicated test scripts have been removed, testing can be performed through the API and utilities.
 
-## Available Scripts
+## Testing Methods
 
-### 1. Quick Test (`quick_test.py`)
+### 1. API Testing
 
-A simple, fast test script for basic functionality verification.
-
-```bash
-# Run quick test
-python3 quick_test.py
-
-# Clean up test issues
-python3 quick_test.py --cleanup
-```
-
-**What it tests:**
-- Basic issue creation
-- Simple workflow transitions
-- Field requirement for upload
-- Takes ~30 seconds
-
-### 2. Comprehensive Test Suite (`test_jira_automation.py`)
-
-Full-featured test suite with multiple scenarios and detailed reporting.
+Test the sync functionality through the REST API:
 
 ```bash
-# Run all tests
-python3 test_jira_automation.py
+# Test sync endpoint
+curl -X POST http://localhost:8987/api/sync/run \
+  -H "Content-Type: application/json"
 
-# Run specific tests
-python3 test_jira_automation.py --tests basic workflow
+# Test admin endpoints
+curl -X GET http://localhost:8987/api/admin/test \
+  -H "X-Admin-Key: jira-admin-key-2024"
 
-# Run tests and auto-cleanup
-python3 test_jira_automation.py --cleanup
-
-# Clean up old test issues (older than 7 days)
-python3 test_jira_automation.py --cleanup-old 7
-
-# Run without confirmation prompts
-python3 test_jira_automation.py --cleanup --no-confirm
+# Test field discovery
+curl -X POST http://localhost:8987/api/admin/fields/discover \
+  -H "X-Admin-Key: jira-admin-key-2024"
 ```
 
-**Test Scenarios:**
-1. **Basic Creation** - Minimal field issue creation
-2. **Complete Workflow** - Full path from Scheduled to Closed
+### 2. JIRA Utilities
+
+The `/jira_utilities/` folder contains helper scripts for testing JIRA workflows:
+
+- `test_jira_automation.py` - Test automation workflows
+- `test_inua_interface.py` - Test INUA interface integration
+- `quick_test.py` - Quick functionality verification
+- `test_escalation_path.py` - Test escalation workflows
+
+Run from the jira_utilities directory:
+```bash
+cd jira_utilities
+python3 test_inua_interface.py
+```
+
+### 3. Manual Testing Through UI
+
+1. **Field Mapping Test**
+   - Navigate to http://localhost:5648/admin/field-mappings
+   - Use the Setup Wizard to test field discovery
+   - Preview field data before saving
+
+2. **Sync Test**
+   - Click "Run Manual Sync" on the dashboard
+   - Monitor progress in real-time
+   - Check sync history for results
 3. **Cancellation Path** - Failed shoot scenario
 4. **Escalation Path** - Quality issues escalation
 5. **Field Validation** - Required field testing

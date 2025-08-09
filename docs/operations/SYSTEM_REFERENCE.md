@@ -364,7 +364,8 @@ cd frontend && ./run.sh
 cd backend && ./venv/bin/python scripts/migrate_configs.py
 
 # Test admin API
-cd /home/hubert/jiraData && ./test_admin_api.sh
+curl -X GET http://localhost:8987/api/admin/test \
+  -H "X-Admin-Key: jira-admin-key-2024"
 
 # Full sync (from backend directory)
 ./venv/bin/python main.py

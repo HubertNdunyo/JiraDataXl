@@ -74,9 +74,22 @@ JIRA_URL_2=https://your-instance2.atlassian.net
 
 ## Mapping Wizard
 
+### Important: Incremental Field Addition
+The mapping wizard **adds new fields to your existing configuration** rather than replacing it. This means:
+- You can run the wizard multiple times to add more fields
+- Previously configured fields are preserved
+- Fields with the same name are automatically updated if selected again
+- The total field count grows with each wizard run
+
+### How Fields Are Grouped
+- Fields with the same name but different custom IDs are shown as a single entry
+- Example: "NDPU Final Review Timestamp" appears once, even if it has different IDs in each instance
+- The wizard automatically maps both instance IDs to the same database column
+
 ### Starting the Wizard
 1. Click "Launch Wizard" on the Field Mappings page
 2. Follow the step-by-step configuration process
+3. New fields will be added to the "Wizard Fields" group
 
 ### Wizard Steps
 
@@ -109,6 +122,21 @@ The smart mapping feature uses several strategies:
 2. **Keyword Matching**: Common terms like "order", "client", "service" boost relevance
 3. **Type Compatibility**: Ensures data types are compatible
 4. **Custom Field Priority**: Custom fields are prioritized over system fields
+
+### Database Column Strategy
+**Important Concept**: Each field creates ONE database column regardless of how many instances it exists in:
+- Field name: "NDPU Final Review Timestamp"
+- Instance 1 ID: `customfield_12689`
+- Instance 2 ID: `customfield_12703`
+- Database column: `ndpu_final_review_timestamp` (single column)
+
+This design ensures:
+- No data duplication in the database
+- Consistent data storage across instances
+- Simplified reporting and queries
+- Clear field-to-column mapping
+
+For more details on the sync architecture, see [SYNC_ARCHITECTURE.md](SYNC_ARCHITECTURE.md)
 
 ## Manual Configuration
 

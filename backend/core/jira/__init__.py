@@ -14,7 +14,7 @@ from .jira_client import (
 )
 
 from .jira_issues import (
-    IssueFetcher,
+    IssueProcessor,
     IssueProcessingError
 )
 
@@ -32,7 +32,7 @@ __all__ = [
     'JiraApiError',
     
     # Issue handling
-    'IssueFetcher',
+    'IssueProcessor',
     'IssueProcessingError',
     
     # Field processing
@@ -60,21 +60,23 @@ def create_jira_client(
     """
     return JiraClient(url, username, password, **kwargs)
 
-def create_issue_fetcher(
+def create_issue_processor(
     client: JiraClient,
+    instance_type: str,
     **kwargs
-) -> IssueFetcher:
+) -> IssueProcessor:
     """
-    Create a configured issue fetcher.
+    Create a configured issue processor.
     
     Args:
         client: JIRA client instance
-        **kwargs: Additional fetcher configuration
+        instance_type: Type of JIRA instance (instance_1 or instance_2)
+        **kwargs: Additional processor configuration
         
     Returns:
-        Configured IssueFetcher instance
+        Configured IssueProcessor instance
     """
-    return IssueFetcher(client, **kwargs)
+    return IssueProcessor(client, instance_type, **kwargs)
 
 def create_field_processor(
     config_path: str = None

@@ -320,6 +320,29 @@ def get_configuration_history(
             return cursor.fetchall()
 
 
+def get_field_mapping_config() -> Optional[Dict[str, Any]]:
+    """Get the active field mapping configuration from database"""
+    config = get_configuration('jira', 'field_mappings')
+    if config:
+        return config['value']
+    return None
+
+
+def save_field_mapping_config(
+    field_mappings: Dict[str, Any],
+    user: str = 'system',
+    reason: str = None
+) -> int:
+    """Save field mapping configuration to database"""
+    return save_configuration(
+        'jira',
+        'field_mappings', 
+        field_mappings,
+        user,
+        reason or 'Field mapping configuration update'
+    )
+
+
 def migrate_file_configs_to_db():
     """One-time migration of file-based configs to database"""
     import os

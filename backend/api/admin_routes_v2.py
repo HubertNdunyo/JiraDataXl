@@ -1057,3 +1057,105 @@ async def get_database_columns(
     except Exception as e:
         logger.error(f"Error fetching database columns: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/clear-issues-table")
+async def clear_issues_table(
+    authorized: bool = Depends(verify_admin_key),
+    x_user: Optional[str] = Header(None)
+):
+    """
+    Clear all data from the jira_issues_v2 table.
+    WARNING: This will delete all synced issues!
+    """
+    try:
+        from core.db.db_core import get_db_connection
+        
+        # Create a backup first for safety
+        logger.info(f"Creating backup before clearing jira_issues_v2 table (requested by {x_user or 'admin'})")
+        
+        # Count existing records first
+        with get_db_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT COUNT(*) FROM jira_issues_v2")
+                count_before = cursor.fetchone()[0]
+                
+                if count_before == 0:
+                    return {
+                        "message": "Table is already empty",
+                        "records_deleted": 0
+                    }
+                
+                # Clear the table using TRUNCATE for better performance
+                logger.info(f"Clearing {count_before} records from jira_issues_v2")
+                cursor.execute("TRUNCATE TABLE jira_issues_v2 RESTART IDENTITY")
+                conn.commit()
+                
+                # Log the operation
+                cursor.execute("""
+                    INSERT INTO audit_log (
+                        operation, 
+                        affected_table, 
+                        affected_records, 
+                        performed_by, 
+                        details
+                    ) VALUES (%s, %s, %s, %s, %s)
+                """, (
+                    'CLEAR_TABLE',
+                    'jira_issues_v2',
+                    count_before,
+                    x_user or 'admin',
+                    f'Cleared {count_before} records from jira_issues_v2 table'
+                ))
+                conn.commit()
+        
+        logger.info(f"Successfully cleared {count_before} records from jira_issues_v2")
+        
+        return {
+            "message": "Table cleared successfully",
+            "records_deleted": count_before,
+            "performed_by": x_user or 'admin',
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Error clearing jira_issues_v2 table: {e}")
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Failed to clear table: {str(e)}"
+        )
+
+
+@router.get("/issues/count")
+async def get_issues_count(
+    authorized: bool = Depends(verify_admin_key)
+):
+    """Get the current count of records in jira_issues_v2 table"""
+    try:
+        from core.db.db_core import get_db_connection
+        
+        with get_db_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT COUNT(*) FROM jira_issues_v2")
+                count = cursor.fetchone()[0]
+                
+                # Get count by project
+                cursor.execute("""
+                    SELECT project_name, COUNT(*) as issue_count 
+                    FROM jira_issues_v2 
+                    GROUP BY project_name 
+                    ORDER BY issue_count DESC
+                    LIMIT 10
+                """)
+                projects = cursor.fetchall()
+                
+                return {
+                    "total_issues": count,
+                    "top_projects": [
+                        {"project": p[0], "count": p[1]} for p in projects
+                    ]
+                }
+                
+    except Exception as e:
+        logger.error(f"Error getting issues count: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
