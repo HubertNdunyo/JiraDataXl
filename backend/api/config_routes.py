@@ -3,33 +3,28 @@ Configuration API routes
 """
 from fastapi import APIRouter, HTTPException
 import logging
-import json
-import os
-from pathlib import Path
 
-from models.schemas import SyncConfig, SyncResponse
+from ..models.schemas import SyncConfig, SyncResponse
+from ..core.db.db_config import get_configuration, save_configuration
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-# Config file path
-CONFIG_FILE = Path(__file__).parent.parent.parent.parent / "config" / "sync_config.json"
-
 
 @router.get("/sync", response_model=SyncConfig)
 async def get_sync_config():
-    """Get current sync configuration"""
+    """Get current sync configuration from database"""
     try:
-        if CONFIG_FILE.exists():
-            with open(CONFIG_FILE, 'r') as f:
-                data = json.load(f)
-                return SyncConfig(
-                    interval_minutes=data.get('interval_minutes', 2),
-                    enabled=data.get('enabled', True)
-                )
+        config = get_configuration('sync', 'scheduler')
+        if config and config.get('value'):
+            data = config['value']
+            return SyncConfig(
+                interval_minutes=data.get('interval_minutes', 5),
+                enabled=data.get('enabled', True)
+            )
         else:
             # Return default config
-            return SyncConfig(interval_minutes=2, enabled=True)
+            return SyncConfig(interval_minutes=5, enabled=True)
     except Exception as e:
         logger.error(f"Failed to get sync config: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -37,21 +32,24 @@ async def get_sync_config():
 
 @router.put("/sync", response_model=SyncResponse)
 async def update_sync_config(config: SyncConfig):
-    """Update sync configuration"""
+    """Update sync configuration in database"""
     try:
-        # Ensure config directory exists
-        CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
+        # Save to database
+        config_data = {
+            'interval_minutes': config.interval_minutes,
+            'enabled': config.enabled
+        }
         
-        # Save configuration
-        with open(CONFIG_FILE, 'w') as f:
-            json.dump({
-                'interval_minutes': config.interval_minutes,
-                'enabled': config.enabled
-            }, f, indent=2)
+        save_configuration(
+            config_type='sync',
+            config_key='scheduler',
+            config_value=config_data,
+            user='api'
+        )
         
         return SyncResponse(
             success=True,
-            message=f"Sync configuration updated successfully"
+            message="Sync configuration updated successfully in database"
         )
     except Exception as e:
         logger.error(f"Failed to update sync config: {e}")

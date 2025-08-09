@@ -26,7 +26,7 @@ class HealthCheck(BaseModel):
 
 class SyncConfig(BaseModel):
     """Sync configuration"""
-    interval_minutes: int = Field(ge=1, le=1440, description="Sync interval in minutes")
+    interval_minutes: int = Field(ge=2, le=1440, description="Sync interval in minutes (minimum 2)")
     enabled: bool = Field(default=True, description="Whether automatic sync is enabled")
     
     model_config = ConfigDict(from_attributes=True)

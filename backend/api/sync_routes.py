@@ -1,7 +1,7 @@
 """
 Sync operation API routes
 """
-from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Request
 from typing import Dict
 import logging
 
@@ -14,7 +14,6 @@ from ..models.schemas import (
     SyncStatistics,
     SyncStatus
 )
-from ..core.sync_manager import SyncManager
 from ..core.db.db_sync_history import (
     get_sync_history, 
     get_sync_run_details,
@@ -25,27 +24,21 @@ from ..core.db.db_sync_history import (
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-# Initialize sync manager lazily to avoid circular imports
-_sync_manager = None
-
-def get_sync_manager():
-    global _sync_manager
-    if _sync_manager is None:
-        _sync_manager = SyncManager()
-    return _sync_manager
-
 
 @router.post("/start", response_model=SyncResponse)
 async def start_sync(
-    request: SyncStartRequest,
-    background_tasks: BackgroundTasks
+    sync_request: SyncStartRequest,
+    background_tasks: BackgroundTasks,
+    request: Request
 ):
     """Start a new sync operation"""
     try:
-        sync_manager = get_sync_manager()
+        sync_manager = request.app.state.sync_manager
+        if not sync_manager:
+            raise HTTPException(status_code=500, detail="Sync manager not initialized")
         
         # Check if sync is already running
-        if sync_manager.is_running and not request.force:
+        if sync_manager.is_running and not sync_request.force:
             return SyncResponse(
                 success=False,
                 message="Sync is already running. Use force=true to override."
@@ -65,10 +58,12 @@ async def start_sync(
 
 
 @router.post("/stop", response_model=SyncResponse)
-async def stop_sync():
+async def stop_sync(request: Request):
     """Stop the current sync operation"""
     try:
-        sync_manager = get_sync_manager()
+        sync_manager = request.app.state.sync_manager
+        if not sync_manager:
+            raise HTTPException(status_code=500, detail="Sync manager not initialized")
         sync_manager.stop_sync()
         return SyncResponse(
             success=True,
@@ -80,10 +75,12 @@ async def stop_sync():
 
 
 @router.get("/progress", response_model=SyncProgress)
-async def get_sync_progress():
+async def get_sync_progress(request: Request):
     """Get current sync progress"""
     try:
-        sync_manager = get_sync_manager()
+        sync_manager = request.app.state.sync_manager
+        if not sync_manager:
+            raise HTTPException(status_code=500, detail="Sync manager not initialized")
         progress = sync_manager.get_progress()
         return progress
     except Exception as e:
@@ -189,10 +186,12 @@ async def get_sync_stats_summary():
 
 
 @router.get("/stats/{sync_id}", response_model=SyncStatistics)
-async def get_sync_stats(sync_id: str):
+async def get_sync_stats(sync_id: str, request: Request):
     """Get statistics for a specific sync operation"""
     try:
-        sync_manager = get_sync_manager()
+        sync_manager = request.app.state.sync_manager
+        if not sync_manager:
+            raise HTTPException(status_code=500, detail="Sync manager not initialized")
         
         # First check in-memory stats
         stats = sync_manager.get_sync_stats(sync_id)

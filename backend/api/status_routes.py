@@ -5,28 +5,57 @@ from fastapi import APIRouter, HTTPException, Request
 import logging
 import psutil
 from datetime import datetime
-import sys
-from pathlib import Path
+import os
+import asyncio
+from typing import Dict
 
-# Add parent directory to import existing logic
-sys.path.append(str(Path(__file__).parent.parent.parent.parent))
-
-from models.schemas import SystemStatus, SyncStatus
-from core.sync_manager import SyncManager
-from core.database import check_db_connection
+from ..models.schemas import SystemStatus, SyncStatus
+from ..core.database import check_db_connection
+from ..core.jira import JiraClient
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-# Initialize sync manager lazily
-_sync_manager = None
 
-def get_sync_manager():
-    global _sync_manager
-    if _sync_manager is None:
-        from core.sync_manager import SyncManager
-        _sync_manager = SyncManager()
-    return _sync_manager
+async def check_jira_connections() -> Dict[str, bool]:
+    """Check JIRA instance connectivity by calling /myself endpoint"""
+    results = {}
+    
+    # Check Instance 1
+    url_1 = os.getenv('JIRA_URL_1')
+    username_1 = os.getenv('JIRA_USERNAME_1')
+    password_1 = os.getenv('JIRA_PASSWORD_1')
+    
+    if url_1 and username_1 and password_1:
+        try:
+            client_1 = JiraClient(url_1, username_1, password_1)
+            # Call lightweight endpoint
+            response = await asyncio.to_thread(client_1._make_request, 'GET', '/myself')
+            results['instance_1'] = bool(response)
+        except Exception as e:
+            logger.warning(f"JIRA instance_1 health check failed: {e}")
+            results['instance_1'] = False
+    else:
+        results['instance_1'] = False
+    
+    # Check Instance 2
+    url_2 = os.getenv('JIRA_URL_2')
+    username_2 = os.getenv('JIRA_USERNAME_2')
+    password_2 = os.getenv('JIRA_PASSWORD_2')
+    
+    if url_2 and username_2 and password_2:
+        try:
+            client_2 = JiraClient(url_2, username_2, password_2)
+            # Call lightweight endpoint
+            response = await asyncio.to_thread(client_2._make_request, 'GET', '/myself')
+            results['instance_2'] = bool(response)
+        except Exception as e:
+            logger.warning(f"JIRA instance_2 health check failed: {e}")
+            results['instance_2'] = False
+    else:
+        results['instance_2'] = False
+    
+    return results
 
 
 @router.get("/system", response_model=SystemStatus)
@@ -37,13 +66,12 @@ async def get_system_status(request: Request):
         db_connected = check_db_connection()
         
         # Check JIRA connections
-        jira_status = {
-            "instance_1": True,  # TODO: Implement actual JIRA connection check
-            "instance_2": True   # TODO: Implement actual JIRA connection check
-        }
+        jira_status = await check_jira_connections()
         
         # Get sync status
-        sync_manager = get_sync_manager()
+        sync_manager = request.app.state.sync_manager
+        if not sync_manager:
+            raise HTTPException(status_code=500, detail="Sync manager not initialized")
         sync_status = sync_manager.get_status()
         sync_progress = sync_manager.get_progress() if sync_status == SyncStatus.RUNNING else None
         last_sync = sync_manager.get_last_sync_stats()

@@ -8,8 +8,6 @@ from typing import Optional, Dict
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from apscheduler.triggers.cron import CronTrigger
-import json
-from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
 import threading
 
@@ -26,30 +24,34 @@ class SyncScheduler:
     def __init__(self, sync_manager: SyncManager):
         self.sync_manager = sync_manager
         self.scheduler = AsyncIOScheduler()
-        self.config_file = Path(__file__).parent.parent / "config" / "sync_config.json"
         self.job_id = "jira_sync_job"
         self.is_running = False
         self.thread_pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="sync_scheduler")
         
     def load_config(self) -> Dict:
-        """Load sync configuration from file"""
+        """Load sync configuration from database"""
         try:
-            if self.config_file.exists():
-                with open(self.config_file, 'r') as f:
-                    return json.load(f)
+            from .db.db_config import get_configuration
+            config = get_configuration('sync', 'scheduler')
+            if config and config.get('value'):
+                return config['value']
             return {"interval_minutes": 5, "enabled": True}  # Default config
         except Exception as e:
-            logger.error(f"Failed to load sync config: {e}")
+            logger.error(f"Failed to load sync config from database: {e}")
             return {"interval_minutes": 5, "enabled": True}
     
     def save_config(self, config: Dict):
-        """Save sync configuration to file"""
+        """Save sync configuration to database"""
         try:
-            self.config_file.parent.mkdir(parents=True, exist_ok=True)
-            with open(self.config_file, 'w') as f:
-                json.dump(config, f, indent=2)
+            from .db.db_config import save_configuration
+            save_configuration(
+                config_type='sync',
+                config_key='scheduler',
+                config_value=config,
+                user='scheduler'
+            )
         except Exception as e:
-            logger.error(f"Failed to save sync config: {e}")
+            logger.error(f"Failed to save sync config to database: {e}")
     
     async def run_scheduled_sync(self):
         """Execute a scheduled sync"""

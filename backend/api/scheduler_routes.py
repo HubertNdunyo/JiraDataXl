@@ -2,7 +2,7 @@
 Scheduler management API routes
 """
 from fastapi import APIRouter, HTTPException, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional
 import logging
 
@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 class SchedulerConfig(BaseModel):
     """Scheduler configuration model"""
     enabled: bool
-    interval_minutes: int
+    interval_minutes: int = Field(ge=2, le=1440, description="Sync interval in minutes (minimum 2)")
 
 
 class SchedulerStatus(BaseModel):
@@ -54,9 +54,9 @@ async def update_scheduler_config(config: SchedulerConfig, request: Request):
         if not scheduler:
             raise HTTPException(status_code=500, detail="Scheduler not initialized")
         
-        # Update interval
-        if config.interval_minutes < 1:
-            raise ValueError("Interval must be at least 1 minute")
+        # Update interval (Pydantic already validates >= 2)
+        if config.interval_minutes < 2:
+            raise ValueError("Interval must be at least 2 minutes to prevent API rate limiting")
         
         scheduler.update_interval(config.interval_minutes)
         
