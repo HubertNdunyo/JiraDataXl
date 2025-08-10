@@ -63,6 +63,44 @@ class IssueProcessor:
         """Reload field mappings from database."""
         self._load_field_mappings()
     
+    def get_required_fields(self) -> List[str]:
+        """
+        Get list of JIRA field IDs required for sync.
+        
+        Returns:
+            List of field IDs to request from JIRA API
+        """
+        fields = set()
+        
+        # Always include system fields
+        system_fields = ['key', 'summary', 'status', 'project', 'updated', 'created', 'issuetype']
+        fields.update(system_fields)
+        
+        # Add all mapped custom fields for this instance
+        for group in self.field_mappings.values():
+            for field_config in group.get('fields', {}).values():
+                instance_config = field_config.get(self.instance_type, {})
+                
+                # Add single field ID
+                field_id = instance_config.get('field_id')
+                if field_id and field_id not in system_fields:
+                    fields.add(field_id)
+                
+                # Add multiple field IDs (for combined fields)
+                field_ids = instance_config.get('field_ids', [])
+                for fid in field_ids:
+                    if fid and fid not in system_fields:
+                        fields.add(fid)
+        
+        # Remove None and empty strings
+        fields = {f for f in fields if f}
+        
+        # Convert to sorted list for consistent ordering
+        field_list = sorted(list(fields))
+        
+        logger.debug(f"Required fields for {self.instance_type}: {field_list}")
+        return field_list
+    
     def get_field_mapping_for_column(self, column_name: str) -> Optional[Dict]:
         """
         Get field mapping configuration for a database column.
@@ -260,6 +298,9 @@ class IssueProcessor:
             # Reload mappings to get latest configuration
             self.reload_mappings()
             
+            # Get required fields for this instance
+            required_fields = self.get_required_fields()
+            
             # Build JQL query
             jql = f'project = {project_key}'
             if updated_after:
@@ -278,6 +319,7 @@ class IssueProcessor:
                 # Fetch batch with changelog for transitions
                 result = self.jira_client.search_issues(
                     jql=jql,
+                    fields=required_fields,
                     start_at=start_at + total_fetched,
                     max_results=batch_size,
                     expand=['changelog']
