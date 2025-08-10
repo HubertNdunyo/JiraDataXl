@@ -17,4 +17,4 @@ def get_sync_functions():
         }
     except ImportError as e:
         print(f"Warning: Could not import main_parent module: {e}")
-        raise
+        raise ImportError(f"Could not import main_parent module: {e}") from e
