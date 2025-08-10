@@ -1,10 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Activity, Settings, Clock, Shield, Home, ChevronDown, ChevronRight, FileJson, Archive, BarChart, Zap, Calendar, TestTube } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { checkAdminAuth, adminLogout } from '@/lib/admin-api'
 
 interface RouteItem {
   path: string
@@ -36,6 +37,16 @@ const dashboardRoutes: RouteItem[] = [
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const [adminExpanded, setAdminExpanded] = useState(pathname?.startsWith('/admin') || false)
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
+
+  useEffect(() => {
+    checkAdminAuth().then(setIsAuthenticated)
+  }, [])
+
+  const handleLogout = async () => {
+    await adminLogout()
+    setIsAuthenticated(false)
+  }
 
   return (
     <div className="flex h-screen">
@@ -125,15 +136,30 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         
         {/* Bottom section */}
         <div className="mt-auto p-6 border-t border-gray-800">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-sm font-semibold">
-              A
+          {isAuthenticated ? (
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-sm font-semibold">
+                A
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium">Admin</p>
+                <p className="text-xs text-gray-400">System Administrator</p>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="text-xs text-gray-400 hover:text-white"
+              >
+                Logout
+              </button>
             </div>
-            <div className="flex-1">
-              <p className="text-sm font-medium">Admin</p>
-              <p className="text-xs text-gray-400">System Administrator</p>
-            </div>
-          </div>
+          ) : (
+            <Link
+              href="/admin/login"
+              className="text-sm text-gray-300 hover:text-white"
+            >
+              Login
+            </Link>
+          )}
         </div>
       </aside>
 

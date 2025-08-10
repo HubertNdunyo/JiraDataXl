@@ -17,6 +17,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { useToast } from '@/hooks/use-toast'
+import { adminFetch, checkAdminAuth } from '@/lib/admin-api'
 import DashboardLayout from './dashboard-layout'
 
 interface SystemStatus {
@@ -55,6 +56,7 @@ export default function Dashboard() {
   const [clearDialogOpen, setClearDialogOpen] = useState(false)
   const [clearing, setClearing] = useState(false)
   const [issueCount, setIssueCount] = useState<number | null>(null)
+  const [isAdmin, setIsAdmin] = useState(false)
   const { toast } = useToast()
 
   const fetchStatus = async () => {
@@ -79,6 +81,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchStatus()
+    checkAdminAuth().then(setIsAdmin)
     const interval = setInterval(fetchStatus, 5000) // Poll every 5 seconds
     return () => clearInterval(interval)
   }, [])
@@ -116,20 +119,58 @@ export default function Dashboard() {
   }
 
   const fetchIssueCount = async () => {
-    // Admin functionality removed from main dashboard
-    // Issue count should be fetched from regular status endpoint
-    // This prevents exposing admin endpoints to non-admin users
+    try {
+      const response = await adminFetch('/api/admin/issues/count')
+      if (response.ok) {
+        const data = await response.json()
+        setIssueCount(data.total_issues)
+      }
+    } catch (error) {
+      console.error('Failed to fetch issue count:', error)
+    }
   }
 
   const handleClearTable = async () => {
-    // Admin functionality removed from main dashboard
-    // Table clearing should only be available in admin pages
-    toast({
-      title: "Admin Access Required",
-      description: "This function is only available in the admin panel",
-      variant: "destructive"
-    })
-    setClearDialogOpen(false)
+    if (!isAdmin) {
+      toast({
+        title: "Admin Access Required",
+        description: "This function is only available for authenticated admins",
+        variant: "destructive"
+      })
+      setClearDialogOpen(false)
+      return
+    }
+
+    setClearing(true)
+    try {
+      const response = await adminFetch('/api/admin/clear-issues-table', {
+        method: 'DELETE'
+      })
+      if (response.ok) {
+        toast({
+          title: 'Data Cleared',
+          description: 'All synced data has been removed.'
+        })
+        fetchStatus()
+      } else {
+        const data = await response.json().catch(() => null)
+        toast({
+          title: 'Error',
+          description: data?.detail || 'Failed to clear data',
+          variant: 'destructive'
+        })
+      }
+    } catch (error) {
+      console.error('Failed to clear table:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to clear data',
+        variant: 'destructive'
+      })
+    } finally {
+      setClearing(false)
+      setClearDialogOpen(false)
+    }
   }
 
   const handleOpenClearDialog = async () => {
@@ -338,15 +379,17 @@ export default function Dashboard() {
                 <RefreshCw className="w-4 h-4" />
                 Refresh
               </Button>
-              <Button
-                onClick={handleOpenClearDialog}
-                variant="outline"
-                className="flex items-center gap-2 border-red-200 hover:bg-red-50 hover:text-red-600"
-                disabled={clearing || syncing}
-              >
-                <Trash2 className="w-4 h-4" />
-                Clear Data
-              </Button>
+              {isAdmin && (
+                <Button
+                  onClick={handleOpenClearDialog}
+                  variant="outline"
+                  className="flex items-center gap-2 border-red-200 hover:bg-red-50 hover:text-red-600"
+                  disabled={clearing || syncing}
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Clear Data
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>

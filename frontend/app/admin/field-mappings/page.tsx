@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { FileJson, RefreshCw, Edit, Plus, Save, AlertCircle, CheckCircle, ShieldCheck, Search, Loader2, Wand2, Database } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { tomorrow } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { FieldEditDialog } from './edit-dialog'
@@ -33,6 +34,7 @@ export default function FieldMappingsPage() {
   const [cachedFields, setCachedFields] = useState<any>(null)
   const [wizardOpen, setWizardOpen] = useState(false)
   const [syncingSchema, setSyncingSchema] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
 
   const fetchConfig = async () => {
     setLoading(true)
@@ -288,6 +290,37 @@ export default function FieldMappingsPage() {
     }
   }
 
+  const filteredGroups = useMemo(() => {
+    if (!searchTerm) return config?.field_groups || {}
+    const term = searchTerm.toLowerCase()
+    const result: any = {}
+    Object.entries(config?.field_groups || {}).forEach(([groupKey, group]: [string, any]) => {
+      const groupMatches =
+        groupKey.toLowerCase().includes(term) ||
+        group.description?.toLowerCase().includes(term)
+
+      const filteredFields = Object.fromEntries(
+        Object.entries(group.fields || {}).filter(([fieldKey, field]: [string, any]) => {
+          return (
+            fieldKey.toLowerCase().includes(term) ||
+            field.description?.toLowerCase().includes(term) ||
+            field.instance_1?.field_id?.toLowerCase().includes(term) ||
+            field.instance_2?.field_id?.toLowerCase().includes(term) ||
+            field.instance_1?.name?.toLowerCase().includes(term) ||
+            field.instance_2?.name?.toLowerCase().includes(term)
+          )
+        })
+      )
+
+      if (groupMatches) {
+        result[groupKey] = group
+      } else if (Object.keys(filteredFields).length > 0) {
+        result[groupKey] = { ...group, fields: filteredFields }
+      }
+    })
+    return result
+  }, [config, searchTerm])
+
   useEffect(() => {
     fetchConfig()
     fetchCachedFields()
@@ -392,6 +425,18 @@ export default function FieldMappingsPage() {
         </div>
       </div>
 
+      <div className="mb-6">
+        <div className="relative max-w-sm">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <Input
+            placeholder="Search fields..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+      </div>
+
       {validationResults && (
         <Alert className={`mb-6 ${validationResults.valid ? '' : 'border-red-500'}`}>
           <div className="flex items-start gap-2">
@@ -484,7 +529,7 @@ export default function FieldMappingsPage() {
 
         <TabsContent value="visual" className="mt-6">
           <div className="space-y-6">
-            {config && Object.entries(config.field_groups || {}).map(([groupKey, group]: [string, any]) => (
+            {Object.entries(filteredGroups).map(([groupKey, group]: [string, any]) => (
               <Card key={groupKey}>
                 <CardHeader>
                   <CardTitle className="text-lg">{groupKey}</CardTitle>

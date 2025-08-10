@@ -63,13 +63,3 @@ def create_status_manager() -> StatusManager:
         Configured StatusManager instance
     """
     return StatusManager()
-
-def initialize_sync():
-    """
-    Initialize sync system.
-    
-    This function should be called when the application starts
-    to ensure all necessary sync components are initialized.
-    """
-    # Future initialization logic can be added here
-    pass
