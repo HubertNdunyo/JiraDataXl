@@ -140,6 +140,8 @@ CREATE INDEX idx_field_cache_field_name ON jira_field_cache(field_name);
 CREATE INDEX idx_field_cache_field_id ON jira_field_cache(field_id);
 ```
 
+*Note*: The field cache table is created automatically by the application. The legacy `backend/core/db/create_field_cache_table.sql` script has been removed.
+
 ## Field Mappings Configuration
 **Note**: Configuration is now stored in the database. The JSON files in `config/` are reference only.
 
