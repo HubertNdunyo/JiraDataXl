@@ -1,13 +1,34 @@
 """
 Scheduler management API routes
 """
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Depends, Header
 from pydantic import BaseModel, Field, AliasChoices
 from typing import Optional
 import logging
+import os
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+
+# Authentication
+async def verify_admin_key(x_admin_key: Optional[str] = Header(None)):
+    """Verify admin API key"""
+    import re
+    
+    # Validate header format (alphanumeric + dash)
+    if x_admin_key and not re.match(r'^[a-zA-Z0-9\-]+$', x_admin_key):
+        raise HTTPException(status_code=400, detail="Invalid API key format")
+    
+    admin_key = os.getenv('ADMIN_API_KEY')
+    if not admin_key:
+        raise HTTPException(
+            status_code=500, 
+            detail="Admin API key not configured. Please set ADMIN_API_KEY environment variable."
+        )
+    if not x_admin_key or x_admin_key != admin_key:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    return True
 
 
 class SchedulerConfig(BaseModel):
@@ -30,7 +51,7 @@ class SchedulerStatus(BaseModel):
 
 
 @router.get("/status", response_model=SchedulerStatus)
-async def get_scheduler_status(request: Request):
+async def get_scheduler_status(request: Request, _: bool = Depends(verify_admin_key)):
     """Get current scheduler status"""
     try:
         scheduler = request.app.state.scheduler
@@ -52,7 +73,7 @@ async def get_scheduler_status(request: Request):
 
 
 @router.put("/config")
-async def update_scheduler_config(config: SchedulerConfig, request: Request):
+async def update_scheduler_config(config: SchedulerConfig, request: Request, _: bool = Depends(verify_admin_key)):
     """Update scheduler configuration"""
     try:
         scheduler = request.app.state.scheduler
@@ -80,7 +101,7 @@ async def update_scheduler_config(config: SchedulerConfig, request: Request):
 
 
 @router.post("/enable")
-async def enable_scheduler(request: Request):
+async def enable_scheduler(request: Request, _: bool = Depends(verify_admin_key)):
     """Enable the scheduler"""
     try:
         scheduler = request.app.state.scheduler
@@ -95,7 +116,7 @@ async def enable_scheduler(request: Request):
 
 
 @router.post("/disable")
-async def disable_scheduler(request: Request):
+async def disable_scheduler(request: Request, _: bool = Depends(verify_admin_key)):
     """Disable the scheduler"""
     try:
         scheduler = request.app.state.scheduler

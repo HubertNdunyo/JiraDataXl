@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
 import { Clock, RefreshCw, Settings } from "lucide-react"
 import DashboardLayout from "../../dashboard-layout"
+import { adminFetch } from "@/lib/admin-api"
 
 interface SchedulerStatus {
   enabled: boolean
@@ -28,7 +29,7 @@ export default function SchedulerPage() {
 
   const fetchStatus = async () => {
     try {
-      const response = await fetch('/api/scheduler/status')
+      const response = await adminFetch('/api/scheduler/status')
       if (!response.ok) throw new Error("Failed to fetch scheduler status")
       const data = await response.json()
       setStatus(data)
@@ -54,9 +55,8 @@ export default function SchedulerPage() {
   const updateScheduler = async () => {
     setSaving(true)
     try {
-      const response = await fetch('/api/scheduler/config', {
+      const response = await adminFetch('/api/scheduler/config', {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           enabled: enabled,
           interval_minutes: intervalValue[0],

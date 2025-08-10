@@ -65,8 +65,8 @@ class SyncScheduler:
             
             # Check last sync time to avoid too frequent syncs
             last_sync = get_latest_sync_run()
-            if last_sync:
-                time_since_last = datetime.now() - last_sync['started_at']
+            if last_sync and last_sync.get('start_time'):
+                time_since_last = datetime.now() - last_sync['start_time']
                 if time_since_last < timedelta(minutes=1):
                     logger.warning("Last sync was less than 1 minute ago, skipping")
                     return
