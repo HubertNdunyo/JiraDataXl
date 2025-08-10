@@ -7,13 +7,15 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Lock } from 'lucide-react'
+import { Lock, Eye, EyeOff } from 'lucide-react'
 import { adminLogin } from '@/lib/admin-api'
 
 export default function AdminLoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [capsLock, setCapsLock] = useState(false)
   const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -53,15 +55,36 @@ export default function AdminLoginPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="Enter admin password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                autoFocus
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Enter admin password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  onKeyUp={(e) => setCapsLock(e.getModifierState('CapsLock'))}
+                  onKeyDown={(e) => setCapsLock(e.getModifierState('CapsLock'))}
+                  required
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground"
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                  <span className="sr-only">
+                    {showPassword ? 'Hide password' : 'Show password'}
+                  </span>
+                </button>
+              </div>
+              {capsLock && (
+                <p className="text-sm text-amber-500">Caps lock is on</p>
+              )}
             </div>
 
             {error && (
