@@ -2,7 +2,6 @@
 Monitoring functions for the application
 """
 import psutil
-import os
 from core.db.db_core import get_connection
 
 def monitor_database_size():
