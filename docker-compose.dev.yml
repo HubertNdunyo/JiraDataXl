@@ -87,6 +87,8 @@ services:
       context: ./frontend
       dockerfile: Dockerfile.dev
     container_name: jira-sync-frontend
+    env_file:
+      - .env
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:8987
       NODE_ENV: development
