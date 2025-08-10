@@ -127,7 +127,7 @@ export default function SchedulerPage() {
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">Status</span>
-              <Badge variant={status?.is_running ? "success" : "secondary"}>
+              <Badge variant={status?.is_running ? "default" : "secondary"}>
                 {status?.is_running ? "Running" : "Stopped"}
               </Badge>
             </div>

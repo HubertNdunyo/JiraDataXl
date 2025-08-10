@@ -8,7 +8,7 @@ const BACKEND_URL = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_API_URL |
 const ADMIN_API_KEY = process.env.ADMIN_API_KEY || ''
 
 // Proxy admin requests to backend with proper authentication
-export async function handleAdminRequest(
+async function handleAdminRequest(
   request: NextRequest,
   method: string
 ) {
