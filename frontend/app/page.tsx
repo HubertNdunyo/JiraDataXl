@@ -17,6 +17,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { useToast } from '@/hooks/use-toast'
+import { adminFetch, checkAdminAuth } from '@/lib/admin-api'
 import DashboardLayout from './dashboard-layout'
 
 interface SystemStatus {
@@ -55,6 +56,7 @@ export default function Dashboard() {
   const [clearDialogOpen, setClearDialogOpen] = useState(false)
   const [clearing, setClearing] = useState(false)
   const [issueCount, setIssueCount] = useState<number | null>(null)
+  const [isAdmin, setIsAdmin] = useState(false)
   const { toast } = useToast()
 
   const fetchStatus = async () => {
@@ -79,6 +81,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchStatus()
+    checkAdminAuth().then(setIsAdmin)
     const interval = setInterval(fetchStatus, 5000) // Poll every 5 seconds
     return () => clearInterval(interval)
   }, [])
@@ -116,20 +119,48 @@ export default function Dashboard() {
   }
 
   const fetchIssueCount = async () => {
-    // Admin functionality removed from main dashboard
-    // Issue count should be fetched from regular status endpoint
-    // This prevents exposing admin endpoints to non-admin users
+    try {
+      const response = await adminFetch('/api/admin/issues/count')
+      if (response.ok) {
+        const data = await response.json()
+        setIssueCount(data.total_issues)
+      }
+    } catch (error) {
+      console.error('Failed to fetch issue count:', error)
+    }
   }
 
   const handleClearTable = async () => {
-    // Admin functionality removed from main dashboard
-    // Table clearing should only be available in admin pages
-    toast({
-      title: "Admin Access Required",
-      description: "This function is only available in the admin panel",
-      variant: "destructive"
-    })
-    setClearDialogOpen(false)
+    setClearing(true)
+    try {
+      const response = await adminFetch('/api/admin/clear-issues-table', {
+        method: 'DELETE'
+      })
+      if (response.ok) {
+        toast({
+          title: 'Data Cleared',
+          description: 'All synced data has been removed.'
+        })
+        fetchStatus()
+      } else {
+        const data = await response.json().catch(() => null)
+        toast({
+          title: 'Error',
+          description: data?.detail || 'Failed to clear data',
+          variant: 'destructive'
+        })
+      }
+    } catch (error) {
+      console.error('Failed to clear table:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to clear data',
+        variant: 'destructive'
+      })
+    } finally {
+      setClearing(false)
+      setClearDialogOpen(false)
+    }
   }
 
   const handleOpenClearDialog = async () => {
@@ -338,59 +369,63 @@ export default function Dashboard() {
                 <RefreshCw className="w-4 h-4" />
                 Refresh
               </Button>
-              <Button
-                onClick={handleOpenClearDialog}
-                variant="outline"
-                className="flex items-center gap-2 border-red-200 hover:bg-red-50 hover:text-red-600"
-                disabled={clearing || syncing}
-              >
-                <Trash2 className="w-4 h-4" />
-                Clear Data
-              </Button>
+              {isAdmin && (
+                <Button
+                  onClick={handleOpenClearDialog}
+                  variant="outline"
+                  className="flex items-center gap-2 border-red-200 hover:bg-red-50 hover:text-red-600"
+                  disabled={clearing || syncing}
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Clear Data
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Clear Table Confirmation Dialog */}
-      <AlertDialog open={clearDialogOpen} onOpenChange={setClearDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-red-500" />
-              Clear All Synced Data?
-            </AlertDialogTitle>
-            <AlertDialogDescription asChild>
-              <div className="space-y-2">
-                <div>
-                  This action will permanently delete all synced issues from the jira_issues_v2 table.
-                </div>
-                {issueCount !== null && issueCount > 0 && (
-                  <div className="font-semibold text-red-600">
-                    Warning: This will delete {issueCount.toLocaleString()} records!
+      {isAdmin && (
+        <AlertDialog open={clearDialogOpen} onOpenChange={setClearDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-red-500" />
+                Clear All Synced Data?
+              </AlertDialogTitle>
+              <AlertDialogDescription asChild>
+                <div className="space-y-2">
+                  <div>
+                    This action will permanently delete all synced issues from the jira_issues_v2 table.
                   </div>
-                )}
-                <div>
-                  This is useful for testing that your field mappings are working correctly with a fresh sync.
+                  {issueCount !== null && issueCount > 0 && (
+                    <div className="font-semibold text-red-600">
+                      Warning: This will delete {issueCount.toLocaleString()} records!
+                    </div>
+                  )}
+                  <div>
+                    This is useful for testing that your field mappings are working correctly with a fresh sync.
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    Note: This only clears the local database. JIRA data remains unchanged.
+                  </div>
                 </div>
-                <div className="text-sm text-muted-foreground">
-                  Note: This only clears the local database. JIRA data remains unchanged.
-                </div>
-              </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={clearing}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleClearTable}
-              disabled={clearing}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              {clearing ? 'Clearing...' : 'Clear All Data'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={clearing}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleClearTable}
+                disabled={clearing}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                {clearing ? 'Clearing...' : 'Clear All Data'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </DashboardLayout>
   )
 }
