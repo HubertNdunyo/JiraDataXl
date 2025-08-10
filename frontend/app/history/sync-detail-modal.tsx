@@ -6,16 +6,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
-import { 
-  Clock, 
-  CheckCircle, 
-  XCircle, 
-  AlertCircle, 
+import {
+  Clock,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
   TrendingUp,
   Activity,
   Zap,
   AlertTriangle
 } from 'lucide-react'
+import { toast } from '@/hooks/use-toast'
 
 interface SyncDetailModalProps {
   open: boolean
@@ -76,6 +77,11 @@ export function SyncDetailModal({ open, onClose, syncId }: SyncDetailModalProps)
       }
     } catch (error) {
       console.error('Failed to fetch sync details:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch sync details',
+        variant: 'destructive'
+      })
     } finally {
       setLoading(false)
     }

@@ -45,9 +45,19 @@ export default function FieldMappingsPage() {
         console.error('Failed to fetch config:', response.status, response.statusText)
         const errorText = await response.text()
         console.error('Error details:', errorText)
+        toast({
+          title: 'Error',
+          description: 'Failed to fetch field mappings',
+          variant: 'destructive'
+        })
       }
     } catch (error) {
       console.error('Failed to fetch config:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch field mappings',
+        variant: 'destructive'
+      })
     } finally {
       setLoading(false)
     }
@@ -224,6 +234,11 @@ export default function FieldMappingsPage() {
       }
     } catch (error) {
       console.error('Failed to fetch cached fields:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch cached fields',
+        variant: 'destructive'
+      })
     }
   }
 

@@ -84,6 +84,11 @@ export default function INUATestPage() {
       setWorkflowInfo(response.data)
     } catch (err) {
       console.error('Failed to fetch workflow info:', err)
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch workflow info',
+        variant: 'destructive',
+      })
     }
   }
 
