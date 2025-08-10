@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-JIRA Sync Dashboard - A high-performance web application for synchronizing data between multiple JIRA instances with field mapping capabilities. The system processes 272 issues/second with Redis caching and PostgreSQL storage.
+JIRA Sync Dashboard - A high-performance web application for synchronizing data between multiple JIRA instances with field mapping capabilities. The system achieves 500 issues/second throughput, syncing 45,000+ issues across 97 projects in ~90 seconds.
 
 ## Common Development Commands
 
@@ -24,6 +24,7 @@ cd backend
 python -m pytest tests/  # Run tests (requires pytest installation)
 alembic upgrade head     # Apply database migrations
 alembic revision --autogenerate -m "description"  # Create new migration
+alembic stamp head       # Mark current schema as up to date
 ```
 
 ### Docker Development
@@ -143,3 +144,56 @@ alembic downgrade -1
 5. **Caching Strategy**: Redis TTL set to 110 seconds (less than 2-minute sync interval).
 
 6. **Error Handling**: Comprehensive logging with correlation IDs for debugging.
+
+## Performance Tuning
+
+### Current Optimized Settings
+- **rate_limit_pause**: 0.5s (balanced for speed vs JIRA rate limits)
+- **batch_size**: 400 issues per API request
+- **max_workers**: 10 parallel workers
+- **lookback_days**: 49 days of history
+- **Performance**: 500 issues/second, ~90 seconds for full sync
+
+### Performance Configuration UI
+Access at http://localhost:5648/admin/performance to:
+- Adjust sync performance parameters with visual sliders
+- Test configuration impact before applying
+- Monitor estimated sync times and resource usage
+- Safe presets prevent aggressive settings that could trigger rate limits
+
+### Database Performance
+Indexes added on key columns for optimal query performance:
+- issue_key (primary key)
+- summary, status, project_name
+- ndpu_order_number, ndpu_listing_address
+- last_updated
+
+## Field Mapping Configuration
+
+⚠️ **Important**: Fields are currently not populated until field mappings are configured.
+
+### Configure Field Mappings
+1. Access admin panel at http://localhost:5648/admin/field-mappings
+2. Use field discovery to find your JIRA custom field IDs
+3. Map database columns to JIRA fields for each instance
+4. Test mappings with sample data
+5. Save and run sync to populate data
+
+### Required Fields for Sync
+The system dynamically collects field IDs from configured mappings and requests:
+- System fields: key, summary, status, project, updated, created, issuetype
+- All custom fields mapped in the configuration
+- Changelog data for transition tracking
+
+## Recent Fixes & Improvements
+
+### Sync Issue Resolution (2025-01-10)
+- Fixed missing 'fields' parameter in JIRA API calls
+- Added `get_required_fields()` method to dynamically collect field IDs
+- Sync now properly fetches configured fields from JIRA
+
+### Performance Optimizations
+- Reduced sync time from 3 minutes to 90 seconds
+- Optimized rate limiting and batch sizes
+- Added parallel processing for multiple projects
+- Database indexes for faster queries

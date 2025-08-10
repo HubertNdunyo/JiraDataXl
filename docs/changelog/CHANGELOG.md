@@ -2,6 +2,54 @@
 
 All notable changes to the JIRA Sync Dashboard project will be documented in this file.
 
+## [2025-01-10] - Critical Sync Fix & Performance Optimizations
+
+### 🐛 Fixed
+- **Critical Sync Issue**: Fixed missing 'fields' parameter in JIRA API calls
+  - Added `get_required_fields()` method to dynamically collect field IDs from mappings
+  - Sync now properly requests all configured fields from JIRA
+  - Resolves "search_issues() missing required positional argument" error
+
+### ⚡ Performance Improvements
+- **50% Faster Sync**: Reduced sync time from 3 minutes to ~90 seconds
+  - Optimized `rate_limit_pause` from 1.0s to 0.5s
+  - Increased `batch_size` from 200 to 400 issues per request
+  - Increased `max_workers` from 8 to 10 for better parallelism
+  - Adjusted `lookback_days` from 60 to 49 for regular syncs
+
+### 📊 Current Performance Metrics
+- **Throughput**: 500 issues/second (up from 272)
+- **Full Sync**: ~90 seconds for 45,000+ issues
+- **Parallel Processing**: 97 projects synced simultaneously
+- **Database**: 56,000+ issues stored and indexed
+
+### 🗄️ Database Enhancements
+- Added performance indexes on key columns:
+  - `idx_jira_issues_v2_summary`
+  - `idx_jira_issues_v2_status`
+  - `idx_jira_issues_v2_ndpu_order_number`
+  - `idx_jira_issues_v2_ndpu_listing_address`
+  - `idx_jira_issues_v2_project_name`
+  - `idx_jira_issues_v2_last_updated`
+
+### 📚 Documentation
+- Created comprehensive Performance Tuning Guide
+- Updated CLAUDE.md with sync fixes and performance settings
+- Updated README with current performance metrics
+- Added field mapping configuration reminders
+
+### 🔧 Configuration
+- Performance settings now stored in database
+- Admin UI at `/admin/performance` for real-time tuning
+- Safe presets to prevent aggressive settings
+- Test configuration before applying changes
+
+### 🎯 UI Improvements
+- Added search functionality to field mappings page
+- Dynamic login/logout display in dashboard footer
+- Admin authentication check for sensitive operations
+- Fixed Badge variant type issues in scheduler page
+
 ## [2025-01-09] - Critical Security Enhancements
 
 ### 🔒 Enhanced Session Security

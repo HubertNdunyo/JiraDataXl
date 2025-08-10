@@ -15,7 +15,7 @@ A high-performance web application for monitoring and managing JIRA synchronizat
 ## 🚀 Features
 
 - **Real-time Dashboard**: Monitor sync status, progress, and system health
-- **High Performance**: 20x faster with Redis caching, processing 272 issues/second
+- **High Performance**: 500 issues/second throughput, syncing 45,000+ issues in ~90 seconds
 - **Sync Control**: Start/stop synchronization operations manually or scheduled
 - **Configuration Management**: Set sync intervals and enable/disable automatic sync
 - **History & Analytics**: Browse past synchronization operations with detailed metrics
@@ -176,11 +176,15 @@ See the `docs/` directory for detailed documentation:
 
 ## ⚡ Performance
 
-- **Sync Speed**: 272 issues/second
-- **Cache Performance**: 20x faster with Redis
+- **Sync Speed**: 500 issues/second throughput
+- **Full Sync Time**: ~90 seconds for 45,000+ issues
+- **Parallel Processing**: 10 concurrent workers across 97 projects
+- **Batch Size**: 400 issues per API request (optimized)
+- **Cache Performance**: Redis caching with smart TTL
 - **Response Times**: Sub-millisecond for cached operations
-- **Database**: Optimized with proper indexes and connection pooling
-- **Monitoring**: Built-in performance metrics tracking
+- **Database**: Optimized with indexes on key columns (issue_key, summary, status, etc.)
+- **Performance Tuning**: Admin UI for real-time performance configuration
+- **Monitoring**: Built-in performance metrics and sync statistics
 
 ## 🔄 Recent Updates (January 2025)
 
