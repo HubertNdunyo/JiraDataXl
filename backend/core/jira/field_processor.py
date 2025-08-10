@@ -11,6 +11,71 @@ from dateutil import parser
 # Configure logging
 logger = logging.getLogger(__name__)
 
+# Mapping of transition names to accepted status values
+STATUS_MAPPING = {
+    "scheduled": [
+        "scheduled",
+        "Scheduled",
+    ],
+    "acknowledged": [
+        "acknowledged",
+        "ACKNOWLEDGED",
+        "Acknowledged",
+        "ack",
+        "acknowledged by agent",
+    ],
+    "at_listing": [
+        "at listing",
+        "At Listing",
+        "AT LISTING",
+        "listing",
+        "at_listing",
+    ],
+    "shoot_complete": [
+        "shoot complete",
+        "Shoot Complete",
+        "SHOOT COMPLETE",
+        "shooting complete",
+        "shoot_complete",
+    ],
+    "uploaded": [
+        "uploaded",
+        "Uploaded",
+        "UPLOADED",
+        "upload complete",
+        "upload_complete",
+    ],
+    "edit_start": [
+        "edit start",
+        "Edit Start",
+        "Edit",
+        "EDIT",
+        "editing started",
+        "edit_start",
+    ],
+    "final_review": [
+        "final review",
+        "Final Review",
+        "Managing Partner Ready",
+        "final_review",
+        "pending review",
+    ],
+    "escalated_editing": [
+        "escalated editing",
+        "Escalated Editing",
+    ],
+    "closed": [
+        "closed",
+        "Closed",
+        "CLOSED",
+        "Complete",
+        "Done",
+        "complete",
+        "completed",
+        "done",
+    ],
+}
+
 class FieldProcessingError(Exception):
     """Exception for field processing errors"""
     pass
