@@ -1,5 +1,15 @@
 # Dynamic Field Sync System Guide
 
+**Last Updated**: August 10, 2025
+
+## ⚠️ CRITICAL: Database Initialization Required
+
+After any database reset or container recreation with `-v` flag:
+```bash
+docker exec jira-sync-backend python scripts/init_database.py
+```
+Without this, field mappings will NOT work!
+
 ## Overview
 
 The JIRA sync system has been completely rebuilt to use **dynamic field mappings** stored in the database. This means you can now:
@@ -24,9 +34,15 @@ client_name = extract_field_value(fields, 'customfield_10600')
 ```python
 # New system - reads from database configuration
 for column in ISSUE_COLUMNS:
-    mapping = get_field_mapping_for_column(column)
+    # Column name mapping handles prefixes (ndpu_order_number -> order_number)
+    field_key = get_field_key_for_column(column)
+    mapping = get_field_mapping_for_column(field_key)
     value = extract_field_value(issue, mapping)
 ```
+
+### Critical Fix (August 2025)
+**Problem**: Database columns like `ndpu_order_number` didn't match field mapping keys like `order_number`
+**Solution**: Added `core/db/column_mappings.py` to translate between them
 
 ---
 
@@ -67,6 +83,98 @@ WHERE config_type = 'jira' AND config_key = 'field_mappings'
    - Extract value using the appropriate field ID for the instance
    - Sanitize and validate based on field type
 3. **Store in Database**: Save processed data to `jira_issues_v2` table
+
+---
+
+## Troubleshooting Field Sync Issues
+
+### Issue: Custom Fields Not Populating
+
+**Symptoms**: 
+- Sync runs successfully
+- Issues are created in database
+- But custom fields (ndpu_*) remain NULL
+
+**Root Causes & Solutions**:
+
+1. **Field mappings not loaded**
+   ```bash
+   # Initialize database with default mappings
+   docker exec jira-sync-backend python scripts/init_database.py
+   ```
+
+2. **Column name mismatch**
+   ```bash
+   # Verify column mapping exists
+   docker exec jira-sync-backend python -c "
+   from core.db.column_mappings import get_field_key_for_column
+   print(get_field_key_for_column('ndpu_order_number'))  # Should output: order_number
+   "
+   ```
+
+3. **Field ID incorrect for instance**
+   ```bash
+   # Discover and verify field IDs
+   curl -X POST http://localhost:8987/api/admin/fields/discover \
+     -H "X-Admin-Key: secure-admin-key-2024"
+   ```
+
+4. **Backend not restarted after config change**
+   ```bash
+   docker-compose -f docker-compose.dev.yml restart backend
+   ```
+
+### Issue: Field Discovery Fails
+
+**Solutions**:
+1. Check JIRA credentials in environment
+2. Verify JIRA API access
+3. Check rate limiting
+
+### Issue: Schema Sync Fails
+
+**Solutions**:
+1. Check database permissions
+2. Verify column types match field types
+3. Review migration logs
+
+---
+
+## Verifying Field Sync Success
+
+### Quick Verification Query
+```sql
+-- Run after sync to verify field population
+SELECT 
+    COUNT(*) as total_issues,
+    COUNT(ndpu_order_number) as has_order_number,
+    COUNT(ndpu_client_name) as has_client_name,
+    COUNT(ndpu_listing_address) as has_address,
+    ROUND(100.0 * COUNT(ndpu_order_number) / NULLIF(COUNT(*), 0), 2) as pct_populated
+FROM jira_issues_v2
+WHERE last_updated > NOW() - INTERVAL '1 hour';
+```
+
+### Check Specific Project
+```sql
+SELECT 
+    issue_key,
+    ndpu_order_number,
+    ndpu_client_name,
+    ndpu_listing_address,
+    status,
+    last_updated
+FROM jira_issues_v2
+WHERE project_name = 'YOUR_PROJECT'
+AND ndpu_order_number IS NOT NULL
+LIMIT 5;
+```
+
+### Monitor Field Extraction
+```bash
+# Watch real-time field mapping activity
+docker logs -f jira-sync-backend | grep -E "Loaded field mappings|Required fields|Field groups"
+```
 
 ---
 

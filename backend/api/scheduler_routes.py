@@ -50,9 +50,31 @@ class SchedulerStatus(BaseModel):
     next_run_time: Optional[str] = None
 
 
+@router.get("/status/public", response_model=SchedulerStatus)
+async def get_scheduler_status_public(request: Request):
+    """Get current scheduler status (public endpoint for dashboard)"""
+    try:
+        scheduler = request.app.state.scheduler
+        if not scheduler:
+            raise HTTPException(status_code=500, detail="Scheduler not initialized")
+        
+        status = scheduler.get_status()
+        next_run = status.get('next_run_time')
+        
+        return SchedulerStatus(
+            enabled=status['enabled'],
+            interval_minutes=status['interval_minutes'],
+            is_running=status['is_running'],
+            next_run_time=next_run.isoformat() if next_run else None
+        )
+    except Exception as e:
+        logger.error(f"Failed to get scheduler status: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/status", response_model=SchedulerStatus)
 async def get_scheduler_status(request: Request, _: bool = Depends(verify_admin_key)):
-    """Get current scheduler status"""
+    """Get current scheduler status (admin endpoint)"""
     try:
         scheduler = request.app.state.scheduler
         if not scheduler:

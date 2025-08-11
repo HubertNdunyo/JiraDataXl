@@ -46,7 +46,7 @@ def create_sync_run(
                 return sync_id
     except Exception as e:
         logger.error(f"Failed to create sync run: {e}")
-        raise DatabaseError(f"Failed to create sync run: {e}")
+        raise DatabaseOperationError(f"Failed to create sync run: {e}")
 
 
 def update_sync_run(
@@ -150,22 +150,22 @@ def get_sync_history(
     params = []
     
     if status:
-        conditions.append("status = %s")
+        conditions.append("sh.status = %s")
         params.append(status)
     
     if start_date:
-        conditions.append("start_time >= %s")
+        conditions.append("sh.start_time >= %s")
         params.append(start_date)
     
     if end_date:
-        conditions.append("start_time <= %s")
+        conditions.append("sh.start_time <= %s")
         params.append(end_date)
     
     where_clause = "WHERE " + " AND ".join(conditions) if conditions else ""
     
     # Count query
     count_query = f"""
-    SELECT COUNT(*) FROM sync_history {where_clause}
+    SELECT COUNT(*) FROM sync_history sh {where_clause}
     """
     
     # Data query with project statistics
@@ -184,8 +184,8 @@ def get_sync_history(
         sh.error_message,
         sh.triggered_by,
         COALESCE(COUNT(pd.id), 0) AS total_projects,
-        COALESCE(SUM(CASE WHEN pd.status = 'completed' THEN 1 ELSE 0 END), 0) AS successful_projects,
-        COALESCE(SUM(CASE WHEN pd.status = 'failed' THEN 1 ELSE 0 END), 0) AS failed_projects
+        COALESCE(COUNT(CASE WHEN pd.issues_failed = 0 AND pd.issues_synced > 0 THEN 1 END), 0) AS successful_projects,
+        COALESCE(COUNT(CASE WHEN pd.issues_failed > 0 THEN 1 END), 0) AS failed_projects
     FROM sync_history sh
     LEFT JOIN sync_project_details pd ON sh.sync_id = pd.sync_id
     {where_clause}
@@ -221,7 +221,7 @@ def get_sync_history(
                 
     except Exception as e:
         logger.error(f"Failed to get sync history: {e}")
-        raise DatabaseError(f"Failed to get sync history: {e}")
+        raise DatabaseOperationError(f"Failed to get sync history: {e}")
 
 
 def get_sync_run_details(sync_id: str) -> Optional[Dict[str, Any]]:
@@ -250,8 +250,8 @@ def get_sync_run_details(sync_id: str) -> Optional[Dict[str, Any]]:
         sh.triggered_by,
         sh.created_at,
         COALESCE(COUNT(pd.id), 0) AS total_projects,
-        COALESCE(SUM(CASE WHEN pd.status = 'completed' THEN 1 ELSE 0 END), 0) AS successful_projects,
-        COALESCE(SUM(CASE WHEN pd.status = 'failed' THEN 1 ELSE 0 END), 0) AS failed_projects
+        COALESCE(COUNT(CASE WHEN pd.issues_failed = 0 AND pd.issues_synced > 0 THEN 1 END), 0) AS successful_projects,
+        COALESCE(COUNT(CASE WHEN pd.issues_failed > 0 THEN 1 END), 0) AS failed_projects
     FROM sync_history sh
     LEFT JOIN sync_project_details pd ON sh.sync_id = pd.sync_id
     WHERE sh.sync_id = %s
@@ -274,7 +274,7 @@ def get_sync_run_details(sync_id: str) -> Optional[Dict[str, Any]]:
                 
     except Exception as e:
         logger.error(f"Failed to get sync run details: {e}")
-        raise DatabaseError(f"Failed to get sync run details: {e}")
+        raise DatabaseOperationError(f"Failed to get sync run details: {e}")
 
 
 def get_latest_sync_run() -> Optional[Dict[str, Any]]:

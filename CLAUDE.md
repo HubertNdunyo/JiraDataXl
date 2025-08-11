@@ -4,9 +4,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-JIRA Sync Dashboard - A high-performance web application for synchronizing data between multiple JIRA instances with field mapping capabilities. The system achieves 500 issues/second throughput, syncing 45,000+ issues across 97 projects in ~90 seconds.
+JIRA Sync Dashboard - A **fully automated**, high-performance web application for synchronizing data between multiple JIRA instances with dynamic field mapping capabilities. The system achieves 500 issues/second throughput, syncing 45,000+ issues across 97 projects in ~90 seconds with **zero manual setup required**.
+
+### Key Achievement: 100% Automated Setup
+The system now self-initializes completely when started fresh, even after `docker-compose down -v`. No manual database setup, configuration loading, or table creation is needed.
 
 ## Common Development Commands
+
+### Quick Start (Fully Automated)
+```bash
+# One-command setup from scratch
+docker-compose -f docker-compose.dev.yml up -d
+# Wait ~60 seconds for automatic initialization
+# System is ready at http://localhost:5648
+
+# Verify 100% test success
+docker exec jira-sync-backend ./tests/test_field_mapping_quick.sh
+```
 
 ### Frontend (Next.js 14)
 ```bash
@@ -29,21 +43,41 @@ alembic stamp head       # Mark current schema as up to date
 
 ### Docker Development
 ```bash
-docker-compose -f docker-compose.dev.yml up     # Start all services with hot-reload
-docker-compose -f docker-compose.prod.yml up -d # Production deployment
-docker-compose logs [service]                   # View service logs
-docker-compose down                            # Stop all services
+# Fresh start (fully automated - just wait ~60 seconds!)
+docker-compose -f docker-compose.dev.yml up -d
+
+# Complete reset and restart (system auto-recovers)
+docker-compose -f docker-compose.dev.yml down -v
+docker-compose -f docker-compose.dev.yml up -d
+
+# Production deployment
+docker-compose -f docker-compose.prod.yml up -d
+
+# View logs
+docker-compose logs -f [service]
+
+# Health check
+docker ps --format "table {{.Names}}\t{{.Status}}"
 ```
 
-### Testing
+### Testing (Must Pass 100%)
 ```bash
-# Backend tests use pytest
-cd backend
-pip install pytest  # If not installed
-python -m pytest tests/ -v
+# Quick field mapping test (<5 seconds) - MUST PASS 100%
+docker exec jira-sync-backend ./tests/test_field_mapping_quick.sh
+
+# Comprehensive test suite (~40 seconds) - MUST PASS 100%  
+docker exec jira-sync-backend python tests/test_field_mapping_comprehensive.py
+
+# Backend unit tests
+docker exec jira-sync-backend python -m pytest tests/ -v
 
 # Run specific test
 python -m pytest tests/test_sync_statistics_counts.py
+
+# Verify system after fresh start
+docker-compose down -v && docker-compose up -d
+sleep 60
+docker exec jira-sync-backend python tests/test_field_mapping_comprehensive.py
 
 # Frontend has no test setup yet - would need Jest/Vitest configuration
 ```
@@ -120,6 +154,14 @@ SESSION_SECRET=32-char-random-string
 
 ## Database Operations
 
+### Automatic Initialization
+The system automatically initializes the database on startup:
+1. Creates all required tables via SQL init scripts
+2. Loads field mappings from configuration files
+3. Applies Alembic migrations
+4. Syncs database schema with field mappings
+
+### Manual Operations
 ```bash
 # Apply migrations
 cd backend && alembic upgrade head
@@ -129,6 +171,28 @@ alembic revision --autogenerate -m "description"
 
 # Rollback migration
 alembic downgrade -1
+
+# Reinitialize database (loads configs, creates tables)
+docker exec jira-sync-backend python scripts/init_database.py
+
+# Complete database reset
+docker-compose down -v
+docker-compose up -d
+# System auto-initializes in ~60 seconds
+```
+
+### Verify Database State
+```bash
+# Check all tables exist
+docker exec jira-sync-postgres psql -U postgres -d jira_sync -c "\dt"
+
+# Verify field mappings loaded
+docker exec jira-sync-postgres psql -U postgres -d jira_sync -c \
+  "SELECT COUNT(*) FROM configurations WHERE config_type='jira' AND is_active=true"
+
+# Check sync statistics
+docker exec jira-sync-postgres psql -U postgres -d jira_sync -c \
+  "SELECT COUNT(*) as total_issues FROM jira_issues"
 ```
 
 ## Important Considerations
@@ -187,13 +251,67 @@ The system dynamically collects field IDs from configured mappings and requests:
 
 ## Recent Fixes & Improvements
 
+### 100% Test Achievement (2025-01-10)
+- **Achieved 100% test success rate** for field mapping system
+- Fixed database schema mismatches (user_updated vs created_by/updated_by)
+- Corrected table names (update_log_v2 instead of update_logs)
+- System now fully auto-initializes after complete teardown
+- All tests pass without manual intervention
+
+### Automatic System Initialization (2025-01-10)
+- Created comprehensive startup orchestration
+- Database tables automatically created via SQL init scripts
+- Field mappings auto-load from configuration files
+- Startup script handles database readiness checks
+- Self-healing architecture recovers from complete volume deletion
+
 ### Sync Issue Resolution (2025-01-10)
 - Fixed missing 'fields' parameter in JIRA API calls
 - Added `get_required_fields()` method to dynamically collect field IDs
 - Sync now properly fetches configured fields from JIRA
+- Made field discovery API more resilient with timeout handling
 
 ### Performance Optimizations
 - Reduced sync time from 3 minutes to 90 seconds
 - Optimized rate limiting and batch sizes
 - Added parallel processing for multiple projects
 - Database indexes for faster queries
+- 500 issues/second throughput achieved
+
+## System Verification Procedures
+
+### After System Recreation
+When recreating the system with `docker-compose down -v`:
+
+1. **Start System**
+   ```bash
+   docker-compose -f docker-compose.dev.yml up -d
+   ```
+
+2. **Wait for Initialization** (~60 seconds)
+   - Database tables created
+   - Field mappings loaded
+   - Migrations applied
+   - Services started
+
+3. **Verify 100% Test Success**
+   ```bash
+   # Quick test - MUST show 4/4 passed
+   docker exec jira-sync-backend ./tests/test_field_mapping_quick.sh
+   
+   # Comprehensive test - MUST show 10/10 passed
+   docker exec jira-sync-backend python tests/test_field_mapping_comprehensive.py
+   ```
+
+4. **Check System Health**
+   ```bash
+   curl http://localhost:8987/health
+   curl http://localhost:5648/api/health
+   ```
+
+### Critical Files for Auto-Initialization
+- `backend/scripts/startup.sh` - Orchestrates startup sequence
+- `backend/scripts/init_database.py` - Creates tables and loads configs
+- `docker/init-scripts/01-init-database.sql` - PostgreSQL initialization
+- `backend/config/field_mappings.json` - Default field mappings
+- `backend/core/db/db_config.py` - Configuration management (fixed column names)

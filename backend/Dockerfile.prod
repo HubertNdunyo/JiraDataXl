@@ -25,6 +25,7 @@ RUN useradd -m -u 1000 appuser && \
 RUN apt-get update && apt-get install -y \
     postgresql-client \
     curl \
+    netcat-openbsd \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
@@ -52,5 +53,8 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
 # Expose port
 EXPOSE 8987
 
-# Run with production server
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8987", "--workers", "4", "--log-level", "info"]
+# Make startup script executable
+RUN chmod +x scripts/startup.sh
+
+# Run with production server using startup script
+CMD ["./scripts/startup.sh"]

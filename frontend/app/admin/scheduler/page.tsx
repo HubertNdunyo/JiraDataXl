@@ -121,14 +121,14 @@ export default function SchedulerPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Clock className="h-5 w-5" />
-              Scheduler Status
+              Scheduler Service
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Status</span>
+              <span className="text-sm font-medium">Scheduler</span>
               <Badge variant={status?.is_running ? "default" : "secondary"}>
-                {status?.is_running ? "Running" : "Stopped"}
+                {status?.is_running ? "Active (will trigger syncs)" : "Inactive"}
               </Badge>
             </div>
             <div className="flex items-center justify-between">

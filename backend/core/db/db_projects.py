@@ -62,7 +62,7 @@ def create_project_tables():
         
         logger.info("Project tables created successfully")
         
-    except DatabaseError as e:
+    except DatabaseOperationError as e:
         logger.error(f"Failed to create project tables: {e}")
         raise ProjectMappingError(f"Table creation failed: {e}")
 
@@ -91,7 +91,7 @@ def get_project_mapping(project_key: str) -> Optional[Dict]:
             ], result[0]))
         return None
         
-    except DatabaseError as e:
+    except DatabaseOperationError as e:
         logger.error(f"Error getting project mapping: {e}")
         raise ProjectMappingError(f"Failed to get project mapping: {e}")
 
@@ -158,7 +158,7 @@ def add_project_mapping(
             return True
         return False
         
-    except DatabaseError as e:
+    except DatabaseOperationError as e:
         logger.error(f"Error adding project mapping: {e}")
         raise ProjectMappingError(f"Failed to add project mapping: {e}")
 
@@ -233,7 +233,7 @@ def update_project_mapping(
             return True
         return False
         
-    except DatabaseError as e:
+    except DatabaseOperationError as e:
         logger.error(f"Error updating project mapping: {e}")
         raise ProjectMappingError(f"Failed to update project mapping: {e}")
 
@@ -265,7 +265,7 @@ def get_all_project_mappings(include_inactive: bool = False) -> List[Dict]:
         ]
         return [dict(zip(columns, row)) for row in result] if result else []
         
-    except DatabaseError as e:
+    except DatabaseOperationError as e:
         logger.error(f"Error getting all project mappings: {e}")
         raise ProjectMappingError(f"Failed to get project mappings: {e}")
 
@@ -297,6 +297,6 @@ def get_project_stats(project_key: str) -> Dict:
             ))
         return {}
         
-    except DatabaseError as e:
+    except DatabaseOperationError as e:
         logger.error(f"Error fetching stats for project {project_key}: {e}")
         raise ProjectMappingError(f"Failed to get project stats: {e}")

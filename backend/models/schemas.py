@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field, ConfigDict, AliasChoices
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 from enum import Enum
+import pytz
 
 
 class SyncStatus(str, Enum):
@@ -21,7 +22,7 @@ class HealthCheck(BaseModel):
     """Health check response"""
     status: str
     message: str
-    timestamp: datetime = Field(default_factory=datetime.now)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(pytz.timezone('Africa/Nairobi')))
 
 
 class SyncConfig(BaseModel):
@@ -79,6 +80,14 @@ class SyncStatistics(BaseModel):
     error_message: Optional[str] = None
 
 
+class SchedulerInfo(BaseModel):
+    """Scheduler information"""
+    enabled: bool
+    is_running: bool
+    interval_minutes: int
+    next_run_time: Optional[datetime] = None
+
+
 class SystemStatus(BaseModel):
     """Overall system status"""
     sync_status: SyncStatus
@@ -88,6 +97,7 @@ class SystemStatus(BaseModel):
     database_connected: bool
     jira_instances_connected: Dict[str, bool]
     system_health: str
+    scheduler_info: Optional[SchedulerInfo] = None
 
 
 class IssueSearchRequest(BaseModel):
@@ -138,4 +148,4 @@ class ErrorResponse(BaseModel):
     """Error response"""
     error: str
     detail: Optional[str] = None
-    timestamp: datetime = Field(default_factory=datetime.now)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(pytz.timezone('Africa/Nairobi')))

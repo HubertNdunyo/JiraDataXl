@@ -9,6 +9,8 @@ services:
       POSTGRES_DB: ${DB_NAME:-jira_sync}
       POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      TZ: Africa/Nairobi
+      PGTZ: Africa/Nairobi
     ports:
       - "5432:5432"
     volumes:
@@ -26,6 +28,8 @@ services:
   redis:
     image: redis:7-alpine
     container_name: jira-sync-redis
+    environment:
+      TZ: Africa/Nairobi
     ports:
       - "6379:6379"
     volumes:
@@ -60,6 +64,7 @@ services:
       API_HOST: 0.0.0.0
       ENV: development
       PYTHONUNBUFFERED: 1
+      TZ: Africa/Nairobi
     ports:
       - "8987:8987"
     volumes:
@@ -75,7 +80,9 @@ services:
       sh -c "
         pip install --upgrade pip &&
         pip install -r requirements.txt &&
-        uvicorn main:app --host 0.0.0.0 --port 8987 --reload
+        apt-get update && apt-get install -y netcat-openbsd &&
+        chmod +x scripts/startup.sh &&
+        ./scripts/startup.sh
       "
     networks:
       - jira-sync-network
@@ -92,6 +99,7 @@ services:
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:8987
       NODE_ENV: development
+      TZ: Africa/Nairobi
     ports:
       - "5648:3000"
     volumes:

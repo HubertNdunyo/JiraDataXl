@@ -7,6 +7,8 @@ from contextlib import asynccontextmanager
 import os
 from dotenv import load_dotenv
 import logging
+import pytz
+from datetime import datetime
 
 from api import sync_routes, issue_routes, config_routes, status_routes, admin_routes_v2, scheduler_routes
 from models.schemas import HealthCheck
@@ -17,9 +19,17 @@ from core.scheduler import SyncScheduler
 # Load environment variables
 load_dotenv()
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
+# Configure logging with EAT timezone in logs
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
 logger = logging.getLogger(__name__)
+
+# Define timezone for the application
+EAT = pytz.timezone('Africa/Nairobi')
+logger.info(f"Application starting. Server time: {datetime.now(EAT).strftime('%Y-%m-%d %H:%M:%S %Z')}")
 
 # Global instances
 sync_manager = None

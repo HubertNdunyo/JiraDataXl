@@ -196,6 +196,76 @@ ON field_cache(cache_key);
 CREATE INDEX IF NOT EXISTS idx_field_cache_expires 
 ON field_cache(expires_at);
 
+-- Create update_log_v2 table for tracking sync updates
+CREATE TABLE IF NOT EXISTS update_log_v2 (
+    id SERIAL PRIMARY KEY,
+    project_name VARCHAR(255) NOT NULL,
+    status VARCHAR(50) NOT NULL,
+    issues_count INTEGER DEFAULT 0,
+    error_message TEXT,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_update_log_v2_project 
+ON update_log_v2(project_name);
+
+CREATE INDEX IF NOT EXISTS idx_update_log_v2_timestamp 
+ON update_log_v2(timestamp DESC);
+
+-- Create configurations table for dynamic field mappings
+CREATE TABLE IF NOT EXISTS configurations (
+    id SERIAL PRIMARY KEY,
+    config_type VARCHAR(50) NOT NULL,
+    config_key VARCHAR(100) NOT NULL,
+    config_value JSONB NOT NULL,
+    version INTEGER DEFAULT 1,
+    is_active BOOLEAN DEFAULT true,
+    user_updated VARCHAR(255),
+    reason TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(config_type, config_key, version)
+);
+
+CREATE INDEX IF NOT EXISTS idx_configurations_active 
+ON configurations(config_type, config_key, is_active);
+
+-- Create configuration_history table
+CREATE TABLE IF NOT EXISTS configuration_history (
+    id SERIAL PRIMARY KEY,
+    config_id INTEGER NOT NULL,
+    config_type VARCHAR(50) NOT NULL,
+    config_key VARCHAR(100) NOT NULL,
+    old_value JSONB,
+    new_value JSONB,
+    changed_by VARCHAR(255),
+    change_reason TEXT,
+    changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create jira_field_cache table
+CREATE TABLE IF NOT EXISTS jira_field_cache (
+    id SERIAL PRIMARY KEY,
+    instance_type VARCHAR(50) NOT NULL,
+    field_id VARCHAR(100) NOT NULL,
+    field_name VARCHAR(255),
+    field_type VARCHAR(50),
+    schema_type VARCHAR(100),
+    custom BOOLEAN DEFAULT FALSE,
+    navigable BOOLEAN DEFAULT TRUE,
+    searchable BOOLEAN DEFAULT TRUE,
+    clauseNames TEXT,
+    auto_complete_url TEXT,
+    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(instance_type, field_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_jira_field_cache_instance 
+ON jira_field_cache(instance_type);
+
+CREATE INDEX IF NOT EXISTS idx_jira_field_cache_field_id 
+ON jira_field_cache(field_id);
+
 -- Grant permissions (adjust user as needed)
 -- GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO your_app_user;
 -- GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO your_app_user;

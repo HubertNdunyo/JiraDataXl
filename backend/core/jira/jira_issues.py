@@ -11,6 +11,7 @@ from .jira_client import JiraClient, JiraClientError
 from .field_processor import FieldProcessor
 from ..db.db_config import get_field_mapping_config
 from ..db.constants import ISSUE_COLUMNS
+from ..db.column_mappings import get_field_key_for_column
 from ..repositories import IssueRepository
 
 # Configure logging
@@ -111,10 +112,14 @@ class IssueProcessor:
         Returns:
             Field mapping configuration or None
         """
+        # Convert database column name to field mapping key
+        field_key = get_field_key_for_column(column_name)
+        
+        # Search for the field in all groups
         for group in self.field_mappings.values():
             fields = group.get('fields', {})
-            if column_name in fields:
-                field_config = fields[column_name]
+            if field_key in fields:
+                field_config = fields[field_key]
                 instance_config = field_config.get(self.instance_type, {})
                 
                 # Build complete mapping
@@ -127,6 +132,11 @@ class IssueProcessor:
                     'source': field_config.get('source'),
                     'combine_method': field_config.get('combine_method', 'space')
                 }
+        
+        # Log unmapped columns for debugging
+        if column_name not in ['issue_key', 'project_name', 'last_updated']:
+            logger.debug(f"No mapping found for column '{column_name}' (field_key: '{field_key}')")
+        
         return None
     
     def extract_field_value(self, issue_data: Dict, field_mapping: Dict) -> Any:

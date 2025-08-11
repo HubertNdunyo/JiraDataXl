@@ -142,10 +142,10 @@ def save_configuration(
                 new_version = current['version'] + 1
                 cursor.execute("""
                     INSERT INTO configurations 
-                    (config_type, config_key, config_value, version, created_by, updated_by)
+                    (config_type, config_key, config_value, version, user_updated, reason)
                     VALUES (%s, %s, %s, %s, %s, %s)
                     RETURNING id
-                """, (config_type, config_key, Json(config_value), new_version, user, user))
+                """, (config_type, config_key, Json(config_value), new_version, user, reason))
                 
                 new_id = cursor.fetchone()['id']
                 
@@ -153,21 +153,21 @@ def save_configuration(
                 cursor.execute("""
                     INSERT INTO configuration_history 
                     (config_id, config_type, config_key, old_value, new_value, 
-                     change_type, changed_by, change_reason)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                     changed_by, change_reason)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
                 """, (
                     new_id, config_type, config_key, 
                     Json(current['config_value']), Json(config_value),
-                    'update', user, reason
+                    user, reason
                 ))
             else:
                 # Insert first version
                 cursor.execute("""
                     INSERT INTO configurations 
-                    (config_type, config_key, config_value, version, created_by, updated_by)
+                    (config_type, config_key, config_value, version, user_updated, reason)
                     VALUES (%s, %s, %s, %s, %s, %s)
                     RETURNING id
-                """, (config_type, config_key, Json(config_value), 1, user, user))
+                """, (config_type, config_key, Json(config_value), 1, user, reason))
                 
                 new_id = cursor.fetchone()['id']
                 
@@ -175,11 +175,11 @@ def save_configuration(
                 cursor.execute("""
                     INSERT INTO configuration_history 
                     (config_id, config_type, config_key, new_value, 
-                     change_type, changed_by, change_reason)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                     changed_by, change_reason)
+                    VALUES (%s, %s, %s, %s, %s, %s)
                 """, (
                     new_id, config_type, config_key, Json(config_value),
-                    'create', user, reason
+                    user, reason
                 ))
             
             conn.commit()

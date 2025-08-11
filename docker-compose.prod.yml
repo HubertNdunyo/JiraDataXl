@@ -9,6 +9,8 @@ services:
       POSTGRES_DB: ${DB_NAME}
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
+      TZ: Africa/Nairobi
+      PGTZ: Africa/Nairobi
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./docker/init-scripts:/docker-entrypoint-initdb.d:ro
@@ -31,6 +33,8 @@ services:
   redis:
     image: redis:7-alpine
     container_name: jira-sync-redis
+    environment:
+      TZ: Africa/Nairobi
     volumes:
       - redis_data:/data
     command: >
@@ -70,6 +74,7 @@ services:
       API_HOST: 0.0.0.0
       ENV: production
       PYTHONUNBUFFERED: 1
+      TZ: Africa/Nairobi
     expose:
       - "8987"
     depends_on:
@@ -105,6 +110,7 @@ services:
     container_name: jira-sync-frontend
     environment:
       NODE_ENV: production
+      TZ: Africa/Nairobi
     ports:
       - "5648:3000"
     depends_on:

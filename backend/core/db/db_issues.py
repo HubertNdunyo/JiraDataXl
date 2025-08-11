@@ -74,7 +74,7 @@ def create_issues_table():
         
         logger.info("Issues table created successfully")
         
-    except DatabaseError as e:
+    except DatabaseOperationError as e:
         logger.error(f"Failed to create issues table: {e}")
         raise IssueError(f"Table creation failed: {e}")
 
@@ -287,7 +287,7 @@ def get_issue_by_key(issue_key: str) -> Optional[Dict]:
             return dict(zip(ISSUE_COLUMNS, result[0]))
         return None
         
-    except DatabaseError as e:
+    except DatabaseOperationError as e:
         logger.error(f"Error retrieving issue {issue_key}: {e}")
         raise IssueError(f"Failed to retrieve issue: {e}")
 
@@ -326,7 +326,7 @@ def get_project_issues(
             return [dict(zip(ISSUE_COLUMNS, row)) for row in result]
         return []
         
-    except DatabaseError as e:
+    except DatabaseOperationError as e:
         logger.error(f"Error retrieving issues for project {project_key}: {e}")
         raise IssueError(f"Failed to retrieve project issues: {e}")
 
@@ -353,6 +353,6 @@ def get_issues_since(timestamp: datetime, limit: int = 100) -> List[Dict]:
             return [dict(zip(ISSUE_COLUMNS, row)) for row in result]
         return []
         
-    except DatabaseError as e:
+    except DatabaseOperationError as e:
         logger.error(f"Error retrieving issues since {timestamp}: {e}")
         raise IssueError(f"Failed to retrieve recent issues: {e}")

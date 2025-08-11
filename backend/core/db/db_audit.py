@@ -22,17 +22,18 @@ def create_audit_tables():
         execute_query("""
             CREATE TABLE IF NOT EXISTS update_log_v2 (
                 id SERIAL PRIMARY KEY,
-                project_key VARCHAR(255),
-                last_update_time TIMESTAMP,
-                status VARCHAR(50),
+                project_name VARCHAR(255) NOT NULL,
+                status VARCHAR(50) NOT NULL,
+                issues_count INTEGER DEFAULT 0,
+                error_message TEXT,
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 duration NUMERIC,
                 records_processed INTEGER,
-                error_message TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                last_update_time TIMESTAMP
             );
 
             CREATE INDEX IF NOT EXISTS idx_update_log_v2_project 
-            ON update_log_v2(project_key);
+            ON update_log_v2(project_name);
             
             CREATE INDEX IF NOT EXISTS idx_update_log_v2_status 
             ON update_log_v2(status);
@@ -62,12 +63,12 @@ def create_audit_tables():
         
         logger.info("Audit tables created successfully")
         
-    except DatabaseError as e:
+    except DatabaseOperationError as e:
         logger.error(f"Failed to create audit tables: {e}")
         raise AuditError(f"Table creation failed: {e}")
 
 def log_update(
-    project_key: str,
+    project_name: str,
     status: str,
     duration: Optional[float] = None,
     records_processed: Optional[int] = None,
@@ -77,7 +78,7 @@ def log_update(
     Log a project update operation.
     
     Args:
-        project_key: Project identifier
+        project_name: Project identifier
         status: Update status (Success/Failed/Empty)
         duration: Operation duration in seconds
         records_processed: Number of records processed
@@ -89,15 +90,15 @@ def log_update(
     try:
         execute_query("""
             INSERT INTO update_log_v2 
-            (project_key, last_update_time, status, duration, records_processed, error_message)
-            VALUES (%s, NOW(), %s, %s, %s, %s)
-        """, (project_key, status, duration, records_processed, error_message))
+            (project_name, last_update_time, status, duration, records_processed, error_message, issues_count, timestamp)
+            VALUES (%s, NOW(), %s, %s, %s, %s, %s, NOW())
+        """, (project_name, status, duration, records_processed, error_message, records_processed or 0))
         
-        logger.info(f"Update log inserted for project {project_key} with status {status}")
+        logger.info(f"Update log inserted for project {project_name} with status {status}")
         return True
         
-    except DatabaseError as e:
-        logger.error(f"Failed to log update for project {project_key}: {e}")
+    except DatabaseOperationError as e:
+        logger.error(f"Failed to log update for project {project_name}: {e}")
         return False
 
 def log_operation(
@@ -146,12 +147,12 @@ def log_operation(
         logger.info(f"Operation log created for {operation_type} on {entity_type} {entity_id}")
         return True
         
-    except DatabaseError as e:
+    except DatabaseOperationError as e:
         logger.error(f"Failed to log operation: {e}")
         return False
 
 def get_project_update_history(
-    project_key: Optional[str] = None,
+    project_name: Optional[str] = None,
     limit: int = 100,
     offset: int = 0
 ) -> List[Dict]:
@@ -159,7 +160,7 @@ def get_project_update_history(
     Get update history for a project or all projects.
     
     Args:
-        project_key: Project identifier (optional - if None, returns all projects)
+        project_name: Project identifier (optional - if None, returns all projects)
         limit: Maximum number of records to return
         offset: Number of records to skip
         
@@ -167,19 +168,19 @@ def get_project_update_history(
         List of update log entries
     """
     try:
-        if project_key:
+        if project_name:
             result = execute_query("""
-                SELECT id, project_key, last_update_time, status, duration, 
-                       records_processed, error_message
+                SELECT id, project_name, last_update_time, status, duration, 
+                       records_processed, error_message, issues_count, timestamp
                 FROM update_log_v2 
-                WHERE project_key = %s
+                WHERE project_name = %s
                 ORDER BY last_update_time DESC
                 LIMIT %s OFFSET %s
-            """, (project_key, limit, offset), fetch=True)
+            """, (project_name, limit, offset), fetch=True)
         else:
             result = execute_query("""
-                SELECT id, project_key, last_update_time, status, duration, 
-                       records_processed, error_message
+                SELECT id, project_name, last_update_time, status, duration, 
+                       records_processed, error_message, issues_count, timestamp
                 FROM update_log_v2 
                 ORDER BY last_update_time DESC
                 LIMIT %s OFFSET %s
@@ -187,13 +188,13 @@ def get_project_update_history(
         
         if result:
             columns = [
-                'id', 'project_key', 'last_update_time', 'status', 'duration',
-                'records_processed', 'error_message'
+                'id', 'project_name', 'last_update_time', 'status', 'duration',
+                'records_processed', 'error_message', 'issues_count', 'timestamp'
             ]
             return [dict(zip(columns, row)) for row in result]
         return []
         
-    except DatabaseError as e:
+    except DatabaseOperationError as e:
         logger.error(f"Failed to get update history: {e}")
         raise AuditError(f"Failed to retrieve update history: {e}")
 
@@ -233,7 +234,7 @@ def get_entity_history(
             return [dict(zip(columns, row)) for row in result]
         return []
         
-    except DatabaseError as e:
+    except DatabaseOperationError as e:
         logger.error(f"Failed to get history for {entity_type} {entity_id}: {e}")
         raise AuditError(f"Failed to retrieve entity history: {e}")
 
@@ -266,6 +267,6 @@ def cleanup_old_logs(days_to_keep: int = 90) -> int:
         logger.info(f"Cleaned up {total_deleted} old log entries")
         return total_deleted
         
-    except DatabaseError as e:
+    except DatabaseOperationError as e:
         logger.error(f"Failed to clean up old logs: {e}")
         raise AuditError(f"Log cleanup failed: {e}")

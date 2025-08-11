@@ -37,6 +37,12 @@ interface SystemStatus {
   next_sync_time?: string
   database_connected: boolean
   system_health: string
+  scheduler_info?: {
+    enabled: boolean
+    is_running: boolean
+    interval_minutes: number
+    next_run_time?: string
+  }
 }
 
 interface SyncStatsSummary {
@@ -72,6 +78,8 @@ export default function Dashboard() {
         const statsData = await statsResponse.json()
         setStatsSummary(statsData)
       }
+      
+      // Scheduler info now comes from system status endpoint
     } catch (error) {
       console.error('Failed to fetch status:', error)
     } finally {
@@ -192,15 +200,22 @@ export default function Dashboard() {
     }
   }
 
-  const getSyncStatusBadge = (status: string) => {
-    const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-      idle: 'secondary',
-      running: 'default',
-      stopped: 'outline',
-      failed: 'destructive',
-    }
-    return <Badge variant={variants[status] || 'secondary'}>{status?.toUpperCase() || 'UNKNOWN'}</Badge>
+  const formatNextSyncTime = (time: string | null) => {
+    if (!time) return "Not scheduled"
+    const nextRun = new Date(time)
+    const now = new Date()
+    const diffMs = nextRun.getTime() - now.getTime()
+    const diffMins = Math.round(diffMs / 60000)
+    
+    if (diffMins < 0) return "Overdue"
+    if (diffMins === 0) return "Any moment"
+    if (diffMins === 1) return "In 1 minute"
+    if (diffMins < 60) return `In ${diffMins} minutes`
+    
+    const diffHours = Math.round(diffMins / 60)
+    return `In ${diffHours} hour${diffHours > 1 ? 's' : ''}`
   }
+
 
   if (loading) {
     return (
@@ -247,15 +262,22 @@ export default function Dashboard() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <RefreshCw className="w-5 h-5" />
-                Sync Status
+                Current Sync Operation
               </CardTitle>
-              <CardDescription>Current synchronization state</CardDescription>
+              <CardDescription>Real-time synchronization activity</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Status</span>
-                  {status && getSyncStatusBadge(status.sync_status)}
+                  <span className="text-sm font-medium">Sync Activity</span>
+                  {status && (
+                    <Badge variant={status.sync_status === 'running' ? 'default' : 'secondary'}>
+                      {status.sync_status === 'running' ? 'Syncing Now' : 
+                       status.sync_status === 'idle' ? 'No Active Sync' : 
+                       status.sync_status === 'stopped' ? 'Stopped' : 
+                       status.sync_status === 'failed' ? 'Last Sync Failed' : status.sync_status}
+                    </Badge>
+                  )}
                 </div>
                 {status?.sync_progress && (
                   <div className="space-y-2">
@@ -267,6 +289,22 @@ export default function Dashboard() {
                     <div className="text-xs text-muted-foreground">
                       {status.sync_progress.current_issues} issues processed
                     </div>
+                  </div>
+                )}
+                {/* Show scheduler info when no sync is running */}
+                {status?.sync_status !== 'running' && status?.scheduler_info && (
+                  <div className="pt-2 border-t">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">Auto-Sync</span>
+                      <Badge variant={status.scheduler_info.enabled ? 'outline' : 'secondary'}>
+                        {status.scheduler_info.enabled ? 'Enabled' : 'Disabled'}
+                      </Badge>
+                    </div>
+                    {status.scheduler_info.enabled && status.scheduler_info.next_run_time && (
+                      <div className="mt-2 text-xs text-muted-foreground">
+                        Next sync: {formatNextSyncTime(status.scheduler_info.next_run_time)}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

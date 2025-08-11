@@ -9,7 +9,7 @@ import os
 import asyncio
 from typing import Dict
 
-from models.schemas import SystemStatus, SyncStatus
+from models.schemas import SystemStatus, SyncStatus, SchedulerInfo
 from core.database import check_db_connection
 from core.jira import JiraClient
 
@@ -104,10 +104,18 @@ async def get_system_status(request: Request):
         sync_progress = sync_manager.get_progress() if sync_status == SyncStatus.RUNNING else None
         last_sync = sync_manager.get_last_sync_stats()
         
-        # Get next sync time from scheduler if available
+        # Get scheduler info if available
+        scheduler_info = None
         next_sync_time = None
         if hasattr(request.app.state, 'scheduler') and request.app.state.scheduler:
+            scheduler_status = request.app.state.scheduler.get_status()
             next_sync_time = request.app.state.scheduler.get_next_run_time()
+            scheduler_info = SchedulerInfo(
+                enabled=scheduler_status.get('enabled', False),
+                is_running=scheduler_status.get('is_running', False),
+                interval_minutes=scheduler_status.get('interval_minutes', 5),
+                next_run_time=next_sync_time
+            )
         
         # Determine overall health
         if not db_connected:
@@ -126,7 +134,8 @@ async def get_system_status(request: Request):
             next_sync_time=next_sync_time,
             database_connected=db_connected,
             jira_instances_connected=jira_status,
-            system_health=health
+            system_health=health,
+            scheduler_info=scheduler_info
         )
     except Exception as e:
         logger.error(f"Failed to get system status: {e}")
