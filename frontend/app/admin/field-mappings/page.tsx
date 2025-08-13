@@ -346,9 +346,9 @@ export default function FieldMappingsPage() {
         <div className="flex gap-2">
           {editMode ? (
             <>
-              <Button 
-                onClick={() => setEditMode(false)} 
-                variant="outline" 
+              <Button
+                onClick={() => setEditMode(false)}
+                variant="outline"
                 size="sm"
                 disabled={saving}
               >
@@ -407,9 +407,9 @@ export default function FieldMappingsPage() {
                 )}
                 {discovering ? 'Discovering...' : 'Discover Fields'}
               </Button>
-              <Button 
-                onClick={syncDatabaseSchema} 
-                variant="outline" 
+              <Button
+                onClick={syncDatabaseSchema}
+                variant="outline"
                 size="sm"
                 disabled={syncingSchema}
               >
