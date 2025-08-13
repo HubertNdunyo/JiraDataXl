@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Slider } from '@/components/ui/slider'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
+import { toast } from '@/hooks/use-toast'
 import { 
   AlertTriangle, 
   Save, 
@@ -91,6 +92,11 @@ export default function PerformanceConfigPage() {
       }
     } catch (error) {
       console.error('Failed to fetch config:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch performance config',
+        variant: 'destructive'
+      })
     } finally {
       setLoading(false)
     }
@@ -135,6 +141,11 @@ export default function PerformanceConfigPage() {
       }
     } catch (error) {
       console.error('Failed to test config:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to test performance config',
+        variant: 'destructive'
+      })
     } finally {
       setTesting(false)
     }

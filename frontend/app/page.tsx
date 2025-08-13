@@ -71,7 +71,7 @@ export default function Dashboard() {
       const data = await response.json()
       setStatus(data)
       setSyncing(data.sync_status === 'running')
-      
+
       // Fetch stats summary
       const statsResponse = await fetch('/api/sync/stats/summary')
       if (statsResponse.ok) {
@@ -82,6 +82,11 @@ export default function Dashboard() {
       // Scheduler info now comes from system status endpoint
     } catch (error) {
       console.error('Failed to fetch status:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch system status',
+        variant: 'destructive'
+      })
     } finally {
       setLoading(false)
     }
@@ -109,6 +114,11 @@ export default function Dashboard() {
       }
     } catch (error) {
       console.error('Failed to start sync:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to start sync',
+        variant: 'destructive'
+      })
     }
   }
 
@@ -123,6 +133,11 @@ export default function Dashboard() {
       }
     } catch (error) {
       console.error('Failed to stop sync:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to stop sync',
+        variant: 'destructive'
+      })
     }
   }
 

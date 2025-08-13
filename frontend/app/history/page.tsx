@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Clock, CheckCircle, XCircle, AlertCircle, ChevronLeft, ChevronRight, RefreshCw, Eye } from 'lucide-react'
 import DashboardLayout from '../dashboard-layout'
 import { SyncDetailModal } from './sync-detail-modal'
+import { toast } from '@/hooks/use-toast'
 
 interface SyncHistory {
   sync_id: string
@@ -54,6 +55,11 @@ export default function HistoryPage() {
       setTotal(data.total || 0)
     } catch (error) {
       console.error('Failed to fetch history:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch sync history',
+        variant: 'destructive'
+      })
     } finally {
       setLoading(false)
       setRefreshing(false)
